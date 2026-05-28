@@ -1,0 +1,79 @@
+import type { ClientGameState, GameLogItem, Rank, Suit } from "./game";
+
+export interface RoomCreatePayload {
+  playerName: string;
+}
+export interface RoomJoinPayload {
+  roomId: string;
+  playerName: string;
+}
+export interface RoomRejoinPayload {
+  roomId: string;
+  playerId: string;
+}
+export interface RoomLeavePayload {
+  roomId: string;
+}
+export interface RoomStartPayload {
+  roomId: string;
+}
+export interface RoomFinishPayload {
+  roomId: string;
+}
+export interface GameAskRankPayload {
+  roomId: string;
+  targetPlayerId: string;
+  rank: Rank;
+}
+export interface GameGuessSuitPayload {
+  roomId: string;
+  suit: Suit;
+}
+export interface GameGuessCountPayload {
+  roomId: string;
+  count: number;
+}
+export interface GameGuessSuitsPayload {
+  roomId: string;
+  suits: Suit[];
+}
+
+export interface RoomCreatedPayload {
+  roomId: string;
+  playerId: string;
+}
+export interface RoomJoinedPayload {
+  roomId: string;
+  playerId: string;
+}
+export interface GameErrorPayload {
+  message: string;
+}
+
+export interface ClientToServerEvents {
+  "room:create": (payload: RoomCreatePayload) => void;
+  "room:join": (payload: RoomJoinPayload) => void;
+  "room:rejoin": (payload: RoomRejoinPayload) => void;
+  "room:leave": (payload: RoomLeavePayload) => void;
+  "room:start": (payload: RoomStartPayload) => void;
+  "room:finish": (payload: RoomFinishPayload) => void;
+  "game:ask-rank": (payload: GameAskRankPayload) => void;
+  "game:guess-suit": (payload: GameGuessSuitPayload) => void;
+  "game:guess-count": (payload: GameGuessCountPayload) => void;
+  "game:guess-suits": (payload: GameGuessSuitsPayload) => void;
+}
+
+export interface ServerToClientEvents {
+  "room:created": (payload: RoomCreatedPayload) => void;
+  "room:joined": (payload: RoomJoinedPayload) => void;
+  "game:state": (state: ClientGameState) => void;
+  "game:log": (item: GameLogItem) => void;
+  "game:error": (payload: GameErrorPayload) => void;
+}
+
+export interface InterServerEvents {}
+
+export interface SocketData {
+  playerId?: string;
+  roomId?: string;
+}
