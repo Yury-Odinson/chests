@@ -67,7 +67,7 @@ export default function GamePage({
         canStart={
           state.status === "waiting" &&
           state.players.length >= 2 &&
-          state.players.length <= 4
+          state.players.length <= 5
         }
         canFinish={state.status === "playing"}
         onStart={() => socket.emit("room:start", { roomId })}
@@ -224,7 +224,7 @@ function Lobby({
 }) {
   return (
     <section className="rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] p-4">
-      <h2 className="text-lg font-semibold">Игроки ({state.players.length}/4)</h2>
+      <h2 className="text-lg font-semibold">Игроки ({state.players.length}/5)</h2>
       <p className="text-xs opacity-60">
         Минимум 2 игрока. Хост запускает партию.
       </p>
@@ -530,8 +530,16 @@ function JoinPrompt({
 
   if (hasSession) {
     return (
-      <main className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center gap-4 px-6 py-12">
-        <p className="text-sm opacity-70">Возвращаю в комнату {roomId}…</p>
+      <main
+        className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-stone-950 bg-cover bg-center px-6 py-10 text-amber-50"
+        style={{
+          backgroundImage:
+            "linear-gradient(90deg, rgba(8, 6, 5, 0.78) 0%, rgba(8, 6, 5, 0.44) 42%, rgba(8, 6, 5, 0.2) 72%), linear-gradient(180deg, rgba(8, 6, 5, 0.1) 0%, rgba(8, 6, 5, 0.56) 100%), url('/welcome-bg.png')",
+        }}
+      >
+        <p className="rounded-2xl border border-amber-100/20 bg-[#160f0b]/88 px-5 py-4 text-sm text-amber-50/70 shadow-[0_24px_80px_rgba(0,0,0,0.56)]">
+          Возвращаю в комнату {roomId}…
+        </p>
       </main>
     );
   }
@@ -545,34 +553,49 @@ function JoinPrompt({
   };
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-4 px-6 py-12">
-      <h1 className="text-2xl font-semibold">Войти в комнату {roomId}</h1>
-      <input
-        autoFocus
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder="Имя"
-        className="w-full rounded-lg border border-[var(--card-border)] bg-[var(--card-bg)] px-3 py-2 outline-none focus:border-[var(--accent)]"
-      />
-      <button
-        type="button"
-        disabled={!connected || !name.trim()}
-        onClick={handleJoin}
-        className="w-full rounded-lg bg-[var(--accent)] px-4 py-3 font-medium text-white disabled:opacity-50"
-      >
-        Войти
-      </button>
-      {error && (
-        <div className="rounded-lg border border-red-400/40 bg-red-50/40 p-3 text-sm text-red-700 dark:bg-red-900/20 dark:text-red-300">
-          {error}{" "}
-          <button onClick={clearError} type="button" className="underline">
-            ок
-          </button>
+    <main
+      className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-stone-950 bg-cover bg-center px-6 py-10 text-amber-50"
+      style={{
+        backgroundImage:
+          "linear-gradient(90deg, rgba(8, 6, 5, 0.78) 0%, rgba(8, 6, 5, 0.44) 42%, rgba(8, 6, 5, 0.2) 72%), linear-gradient(180deg, rgba(8, 6, 5, 0.1) 0%, rgba(8, 6, 5, 0.56) 100%), url('/welcome-bg.png')",
+      }}
+    >
+      <section className="relative z-10 w-full max-w-md rounded-2xl border border-amber-100/20 bg-[#160f0b]/88 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.56)]">
+        <h1 className="text-2xl font-semibold">Войти в комнату {roomId}</h1>
+        <div className="mt-6 space-y-3">
+          <label className="block text-sm font-medium text-amber-50/86">
+            Имя
+          </label>
+          <input
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Имя"
+            className="w-full rounded-lg border border-amber-100/20 bg-amber-50 px-3 py-2 text-stone-950 outline-none transition placeholder:text-stone-500 focus:border-amber-300"
+          />
         </div>
-      )}
-      {!connected && (
-        <p className="text-center text-xs opacity-60">подключаюсь…</p>
-      )}
+        <button
+          type="button"
+          disabled={!connected || !name.trim()}
+          onClick={handleJoin}
+          className="mt-4 w-full rounded-lg bg-amber-300 px-4 py-3 font-medium text-stone-950 transition hover:bg-amber-200 disabled:opacity-50"
+        >
+          Войти
+        </button>
+        {error && (
+          <div className="mt-4 rounded-lg border border-red-300/40 bg-red-950/40 p-3 text-sm text-red-100">
+            {error}{" "}
+            <button onClick={clearError} type="button" className="underline">
+              ок
+            </button>
+          </div>
+        )}
+        {!connected && (
+          <p className="mt-4 text-center text-xs text-amber-50/55">
+            подключаюсь…
+          </p>
+        )}
+      </section>
     </main>
   );
 }

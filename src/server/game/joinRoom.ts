@@ -3,7 +3,7 @@ import type { GameRoom, Player } from "@/shared/types/game";
 import { err, makeLog, ok } from "./helpers";
 import type { EngineResult } from "./types";
 
-const MAX_PLAYERS = 4;
+const MAX_PLAYERS = 5;
 
 export function joinRoom(
   room: GameRoom,

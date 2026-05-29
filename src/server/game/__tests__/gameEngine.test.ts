@@ -128,26 +128,26 @@ describe("createRoom + joinRoom", () => {
     expect(room.hostId).toBe(room.players[0].id);
   });
 
-  it("joinRoom adds players up to 4", () => {
+  it("joinRoom adds players up to 5", () => {
     let room = createRoom({ hostSocketId: "s1", hostName: "A" });
-    for (const name of ["B", "C", "D"]) {
+    for (const name of ["B", "C", "D", "E"]) {
       const result = joinRoom(room, { socketId: `sock-${name}`, playerName: name });
       const ok = assertOk(result);
       room = ok.room;
     }
-    expect(room.players).toHaveLength(4);
+    expect(room.players).toHaveLength(5);
   });
 
-  it("joinRoom rejects 5th player", () => {
+  it("joinRoom rejects 6th player", () => {
     let room = createRoom({ hostSocketId: "s1", hostName: "A" });
-    for (const name of ["B", "C", "D"]) {
+    for (const name of ["B", "C", "D", "E"]) {
       const ok = assertOk(
         joinRoom(room, { socketId: `sock-${name}`, playerName: name })
       );
       room = ok.room;
     }
-    const fifth = joinRoom(room, { socketId: "sock-E", playerName: "E" });
-    expect(fifth.ok).toBe(false);
+    const sixth = joinRoom(room, { socketId: "sock-F", playerName: "F" });
+    expect(sixth.ok).toBe(false);
   });
 
   it("joinRoom rejects duplicate name", () => {
@@ -190,6 +190,22 @@ describe("startGame", () => {
       expect(p.hand).toHaveLength(5);
     }
     expect(result.room.deck).toHaveLength(52 - 20);
+  });
+
+  it("deals 5 cards each for 5 players", () => {
+    let room = createRoom({ hostSocketId: "s1", hostName: "A" });
+    for (const name of ["B", "C", "D", "E"]) {
+      room = assertOk(
+        joinRoom(room, { socketId: `s-${name}`, playerName: name })
+      ).room;
+    }
+    const result = assertOk(
+      startGame(room, { hostId: room.hostId, rng: seededRng(3) })
+    );
+    for (const p of result.room.players) {
+      expect(p.hand).toHaveLength(5);
+    }
+    expect(result.room.deck).toHaveLength(52 - 25);
   });
 
   it("rejects start with 1 player", () => {
