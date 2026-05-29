@@ -306,6 +306,8 @@ function PlayArea({
         <GameLog items={state.log} variant="table" />
       </div>
 
+      <MascotHint />
+
       <div className="game-image-layer pointer-events-none absolute z-30">
         {opponents.slice(0, OPPONENT_SEAT_SLOTS.length).map((player, index) => {
           const isSelectable =
@@ -337,6 +339,23 @@ function PlayArea({
         <MySeat state={state} />
       </div>
     </section>
+  );
+}
+
+function MascotHint() {
+  return (
+    <aside className="game-mascot pointer-events-none absolute z-[45]">
+      <div className="game-mascot-bubble absolute rounded-[22px] border-2 border-stone-900 bg-amber-50 px-4 py-3 text-sm font-semibold leading-snug text-stone-900 shadow-[0_12px_30px_rgba(0,0,0,0.38)]">
+        Выбирай соперника за столом. Я подскажу, если что.
+        <span className="absolute -bottom-3 left-10 h-6 w-6 rotate-45 border-b-2 border-r-2 border-stone-900 bg-amber-50" />
+      </div>
+      <img
+        src="/mascot.png"
+        alt="Маскот игры"
+        className="game-mascot-image h-auto select-none drop-shadow-[0_20px_28px_rgba(0,0,0,0.5)]"
+        draggable={false}
+      />
+    </aside>
   );
 }
 

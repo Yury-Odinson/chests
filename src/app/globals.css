@@ -87,12 +87,36 @@ body {
   left: 55.5%;
 }
 
+.game-mascot {
+  bottom: 0;
+  left: 88px;
+}
+
+.game-mascot-image {
+  width: 340px;
+}
+
+.game-mascot-bubble {
+  left: 245px;
+  top: 42px;
+  width: 250px;
+}
+
 @media (max-width: 1600px) {
   .game-scene-bg {
     --game-bg-position: 66%;
     --game-bg-position-factor: 0.66;
     --game-seat-width: 140px;
     --game-table-control-width: 340px;
+  }
+
+  .game-mascot-image {
+    width: 310px;
+  }
+
+  .game-mascot-bubble {
+    left: 225px;
+    width: 230px;
   }
 }
 
@@ -104,6 +128,20 @@ body {
     --game-seat-width: 132px;
     --game-table-control-width: 320px;
   }
+
+  .game-mascot {
+    left: 56px;
+  }
+
+  .game-mascot-image {
+    width: 260px;
+  }
+
+  .game-mascot-bubble {
+    left: 190px;
+    top: 34px;
+    width: 205px;
+  }
 }
 
 @media (max-width: 1180px) {
@@ -113,6 +151,20 @@ body {
     --game-player-nudge-x: 0%;
     --game-seat-width: 122px;
     --game-table-control-width: 300px;
+  }
+
+  .game-mascot {
+    left: 36px;
+  }
+
+  .game-mascot-image {
+    width: 210px;
+  }
+
+  .game-mascot-bubble {
+    left: 150px;
+    width: 180px;
+    font-size: 12px;
   }
 
   .game-seat-slot-1 {
