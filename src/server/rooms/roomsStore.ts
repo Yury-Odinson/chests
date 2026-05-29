@@ -23,4 +23,21 @@ export const roomsStore = {
   all(): GameRoom[] {
     return [...rooms.values()];
   },
+  /**
+   * Remove rooms with no connected players that are older than `maxAgeMs`.
+   * Safety net for rooms that somehow outlived their players. Returns the
+   * number of rooms removed.
+   */
+  sweep(maxAgeMs: number, now: number = Date.now()): number {
+    let removed = 0;
+    for (const room of rooms.values()) {
+      const empty = room.players.every((p) => !p.connected);
+      const stale = now - new Date(room.createdAt).getTime() > maxAgeMs;
+      if (empty && stale) {
+        rooms.delete(room.id);
+        removed += 1;
+      }
+    }
+    return removed;
+  },
 };

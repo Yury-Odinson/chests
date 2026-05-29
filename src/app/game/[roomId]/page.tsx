@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useGameSocket } from "@/features/game/SocketProvider";
 import { AskFlow } from "@/features/game/components/AskFlow";
@@ -60,7 +60,7 @@ export default function GamePage({
         onLeave={() => {
           socket.emit("room:leave", { roomId });
           setSession(null);
-          router.push("/");
+          router.push("/lobby");
         }}
         hostId={state.hostId}
         meId={state.me.id}
@@ -95,7 +95,7 @@ export default function GamePage({
           state={state}
           onClose={() => {
             setSession(null);
-            router.push("/");
+            router.push("/lobby");
           }}
         />
       )}
@@ -525,8 +525,13 @@ function JoinPrompt({
   hasSession: boolean;
   onJoined: () => void;
 }) {
-  const { socket, connected, error, clearError } = useGameSocket();
+  const { socket, connected, error, clearError, name: savedName } =
+    useGameSocket();
   const [name, setName] = useState("");
+
+  useEffect(() => {
+    if (savedName) setName(savedName);
+  }, [savedName]);
 
   if (hasSession) {
     return (

@@ -100,6 +100,14 @@ export interface GameRoom {
   createdAt: string;
 }
 
+export interface RoomSummary {
+  roomId: string;
+  hostName: string;
+  playerCount: number;
+  maxPlayers: number;
+  status: GameStatus;
+}
+
 export interface ClientGameState {
   roomId: string;
   status: GameStatus;

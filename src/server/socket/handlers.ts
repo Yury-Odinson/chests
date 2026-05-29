@@ -27,7 +27,14 @@ import { leaveRoom } from "@/server/game/leaveRoom";
 import { rejoinRoom } from "@/server/game/rejoinRoom";
 import { startGame } from "@/server/game/startGame";
 import { roomsStore } from "@/server/rooms/roomsStore";
-import { broadcastLogs, broadcastState, type GameIO } from "./broadcast";
+import {
+  broadcastLobby,
+  broadcastLogs,
+  broadcastState,
+  emitRoomList,
+  LOBBY_ROOM,
+  type GameIO,
+} from "./broadcast";
 
 type GameSocket = Socket<
   ClientToServerEvents,
@@ -55,6 +62,15 @@ function applyResult(
 }
 
 export function registerHandlers(io: GameIO, socket: GameSocket): void {
+  socket.on("lobby:join", () => {
+    socket.join(LOBBY_ROOM);
+    emitRoomList(socket);
+  });
+
+  socket.on("lobby:leave", () => {
+    socket.leave(LOBBY_ROOM);
+  });
+
   socket.on("room:create", (payload: RoomCreatePayload) => {
     const name = payload.playerName?.trim();
     if (!name) return emitError(socket, "Имя не может быть пустым");
@@ -65,10 +81,12 @@ export function registerHandlers(io: GameIO, socket: GameSocket): void {
     const playerId = room.players[0].id;
     socket.data.playerId = playerId;
     socket.data.roomId = room.id;
+    socket.leave(LOBBY_ROOM);
     socket.join(room.id);
 
     socket.emit("room:created", { roomId: room.id, playerId });
     broadcastState(io, room);
+    broadcastLobby(io);
   });
 
   socket.on("room:join", (payload: RoomJoinPayload) => {
@@ -84,19 +102,21 @@ export function registerHandlers(io: GameIO, socket: GameSocket): void {
     const playerId = result.playerId!;
     socket.data.playerId = playerId;
     socket.data.roomId = result.room.id;
+    socket.leave(LOBBY_ROOM);
     socket.join(result.room.id);
 
     roomsStore.set(result.room);
     socket.emit("room:joined", { roomId: result.room.id, playerId });
     broadcastLogs(io, result.room, result.logs);
     broadcastState(io, result.room);
+    broadcastLobby(io);
   });
 
   socket.on("room:rejoin", (payload: RoomRejoinPayload) => {
     const room = roomsStore.get(payload.roomId);
-    if (!room) return emitError(socket, "Комната не найдена");
+    if (!room) return socket.emit("session:invalid");
     if (!room.players.some((p) => p.id === payload.playerId)) {
-      return emitError(socket, "Игрок не найден в комнате");
+      return socket.emit("session:invalid");
     }
 
     const result = rejoinRoom(room, {
@@ -107,12 +127,14 @@ export function registerHandlers(io: GameIO, socket: GameSocket): void {
 
     socket.data.playerId = payload.playerId;
     socket.data.roomId = room.id;
+    socket.leave(LOBBY_ROOM);
     socket.join(room.id);
 
     roomsStore.set(result.room);
     socket.emit("room:joined", { roomId: room.id, playerId: payload.playerId });
     broadcastLogs(io, result.room, result.logs);
     broadcastState(io, result.room);
+    broadcastLobby(io);
   });
 
   socket.on("room:leave", (payload: RoomLeavePayload) => {
@@ -126,6 +148,7 @@ export function registerHandlers(io: GameIO, socket: GameSocket): void {
     if (!playerId) return emitError(socket, "Вы не в комнате");
 
     applyResult(io, socket, startGame(room, { hostId: playerId }));
+    broadcastLobby(io);
   });
 
   socket.on("room:finish", (payload: RoomFinishPayload) => {
@@ -222,6 +245,7 @@ function handleLeave(
 
   if (result.destroyed) {
     roomsStore.delete(room.id);
+    broadcastLobby(io);
     return;
   }
 
@@ -234,9 +258,25 @@ function handleLeave(
     logs = [...logs, ...turn.logs];
   }
 
+  // A started/finished game nobody is connected to anymore is dead weight —
+  // drop it instead of leaving a stale room lingering in memory.
+  if (
+    finalRoom.status !== "waiting" &&
+    finalRoom.players.every((p) => !p.connected)
+  ) {
+    roomsStore.delete(finalRoom.id);
+    if (!isDisconnect) {
+      socket.leave(finalRoom.id);
+      socket.data.playerId = undefined;
+      socket.data.roomId = undefined;
+    }
+    return;
+  }
+
   roomsStore.set(finalRoom);
   broadcastLogs(io, finalRoom, logs);
   broadcastState(io, finalRoom);
+  broadcastLobby(io);
 
   if (!isDisconnect) {
     socket.leave(room.id);

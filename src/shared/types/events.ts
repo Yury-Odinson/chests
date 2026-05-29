@@ -1,4 +1,10 @@
-import type { ClientGameState, GameLogItem, Rank, Suit } from "./game";
+import type {
+  ClientGameState,
+  GameLogItem,
+  Rank,
+  RoomSummary,
+  Suit,
+} from "./game";
 
 export interface RoomCreatePayload {
   playerName: string;
@@ -38,6 +44,10 @@ export interface GameGuessSuitsPayload {
   suits: Suit[];
 }
 
+export interface RoomListPayload {
+  rooms: RoomSummary[];
+}
+
 export interface RoomCreatedPayload {
   roomId: string;
   playerId: string;
@@ -51,6 +61,8 @@ export interface GameErrorPayload {
 }
 
 export interface ClientToServerEvents {
+  "lobby:join": () => void;
+  "lobby:leave": () => void;
   "room:create": (payload: RoomCreatePayload) => void;
   "room:join": (payload: RoomJoinPayload) => void;
   "room:rejoin": (payload: RoomRejoinPayload) => void;
@@ -64,8 +76,10 @@ export interface ClientToServerEvents {
 }
 
 export interface ServerToClientEvents {
+  "room:list": (payload: RoomListPayload) => void;
   "room:created": (payload: RoomCreatedPayload) => void;
   "room:joined": (payload: RoomJoinedPayload) => void;
+  "session:invalid": () => void;
   "game:state": (state: ClientGameState) => void;
   "game:log": (item: GameLogItem) => void;
   "game:error": (payload: GameErrorPayload) => void;
