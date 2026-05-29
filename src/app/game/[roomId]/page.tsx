@@ -325,7 +325,7 @@ function PlayArea({
           );
         })}
 
-        <div className="game-table-control pointer-events-auto absolute top-[52%] z-40 w-[420px] -translate-x-1/2 -translate-y-1/2">
+        <div className="game-table-control pointer-events-auto absolute z-40 -translate-x-1/2 -translate-y-1/2">
           <AskFlow
             state={state}
             socket={socket}
@@ -382,10 +382,10 @@ function TableSeat({
   onSelect: () => void;
 }) {
   const className = [
-    "game-player-seat pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 rounded-xl border px-2.5 py-2 text-left text-amber-50 shadow-[0_18px_48px_rgba(0,0,0,0.44)] backdrop-blur-[2px] transition",
+    "game-player-seat pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 rounded-xl border px-2.5 py-2 text-left text-amber-50 shadow-[0_18px_48px_rgba(0,0,0,0.44)] transition",
     isSelectable ? "z-30 cursor-pointer" : "z-10",
     isDimmed ? "opacity-45" : "opacity-100",
-    "bg-[#1d130d]/78",
+    "bg-[#1d130d]/90",
     isSelected
       ? "border-amber-200 ring-2 ring-amber-200/70"
       : isCurrent

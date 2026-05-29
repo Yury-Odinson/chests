@@ -36,8 +36,9 @@ body {
 .game-scene-bg {
   --game-bg-position: 58%;
   --game-bg-position-factor: 0.58;
-  --game-player-nudge-x: 2%;
-  --game-seat-width: 164px;
+  --game-player-nudge-x: 0%;
+  --game-seat-width: 148px;
+  --game-table-control-width: 360px;
   background-position: var(--game-bg-position) center;
 }
 
@@ -57,39 +58,41 @@ body {
 }
 
 .game-seat-slot-1 {
-  left: calc(44.4% + var(--game-player-nudge-x));
-  top: 53%;
+  left: calc(42.3% + var(--game-player-nudge-x));
+  top: 58%;
 }
 
 .game-seat-slot-2 {
-  left: calc(50% + var(--game-player-nudge-x));
-  top: 41%;
+  left: calc(49.5% + var(--game-player-nudge-x));
+  top: 35.5%;
 }
 
 .game-seat-slot-3 {
-  left: calc(60.3% + var(--game-player-nudge-x));
-  top: 41%;
+  left: calc(61.5% + var(--game-player-nudge-x));
+  top: 35.5%;
 }
 
 .game-seat-slot-4 {
-  left: calc(66.2% + var(--game-player-nudge-x));
-  top: 53%;
+  left: calc(69.3% + var(--game-player-nudge-x));
+  top: 58%;
 }
 
 .game-table-control {
-  left: 55%;
+  left: 55.5%;
+  top: 58%;
+  width: var(--game-table-control-width);
 }
 
 .game-my-seat {
-  left: calc(50.7% + var(--game-player-nudge-x));
+  left: 55.5%;
 }
 
 @media (max-width: 1600px) {
   .game-scene-bg {
     --game-bg-position: 66%;
     --game-bg-position-factor: 0.66;
-    --game-player-nudge-x: 1%;
-    --game-seat-width: 154px;
+    --game-seat-width: 140px;
+    --game-table-control-width: 340px;
   }
 }
 
@@ -98,7 +101,8 @@ body {
     --game-bg-position: 76%;
     --game-bg-position-factor: 0.76;
     --game-player-nudge-x: 0%;
-    --game-seat-width: 142px;
+    --game-seat-width: 132px;
+    --game-table-control-width: 320px;
   }
 }
 
@@ -107,23 +111,28 @@ body {
     --game-bg-position: 84%;
     --game-bg-position-factor: 0.84;
     --game-player-nudge-x: 0%;
-    --game-seat-width: 128px;
+    --game-seat-width: 122px;
+    --game-table-control-width: 300px;
   }
 
   .game-seat-slot-1 {
-    left: 41.5%;
+    left: 42.3%;
+    top: 58%;
   }
 
   .game-seat-slot-2 {
     left: 49.5%;
+    top: 35.5%;
   }
 
   .game-seat-slot-3 {
-    left: 60.5%;
+    left: 61.5%;
+    top: 35.5%;
   }
 
   .game-seat-slot-4 {
-    left: 69.5%;
+    left: 69.3%;
+    top: 58%;
   }
 }
 
