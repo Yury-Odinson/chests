@@ -33,6 +33,110 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.game-scene-bg {
+  --game-bg-position: 58%;
+  --game-bg-position-factor: 0.58;
+  --game-player-nudge-x: 2%;
+  --game-seat-width: 164px;
+  background-position: var(--game-bg-position) center;
+}
+
+.game-image-layer {
+  --game-bg-rendered-width: calc(100vh * 1586 / 672);
+  height: 100vh;
+  left: calc(
+    (100vw - var(--game-bg-rendered-width)) *
+      var(--game-bg-position-factor)
+  );
+  top: 0;
+  width: var(--game-bg-rendered-width);
+}
+
+.game-player-seat {
+  width: var(--game-seat-width);
+}
+
+.game-seat-slot-1 {
+  left: calc(44.4% + var(--game-player-nudge-x));
+  top: 53%;
+}
+
+.game-seat-slot-2 {
+  left: calc(50% + var(--game-player-nudge-x));
+  top: 41%;
+}
+
+.game-seat-slot-3 {
+  left: calc(60.3% + var(--game-player-nudge-x));
+  top: 41%;
+}
+
+.game-seat-slot-4 {
+  left: calc(66.2% + var(--game-player-nudge-x));
+  top: 53%;
+}
+
+.game-table-control {
+  left: 55%;
+}
+
+.game-my-seat {
+  left: calc(50.7% + var(--game-player-nudge-x));
+}
+
+@media (max-width: 1600px) {
+  .game-scene-bg {
+    --game-bg-position: 66%;
+    --game-bg-position-factor: 0.66;
+    --game-player-nudge-x: 1%;
+    --game-seat-width: 154px;
+  }
+}
+
+@media (max-width: 1360px) {
+  .game-scene-bg {
+    --game-bg-position: 76%;
+    --game-bg-position-factor: 0.76;
+    --game-player-nudge-x: 0%;
+    --game-seat-width: 142px;
+  }
+}
+
+@media (max-width: 1180px) {
+  .game-scene-bg {
+    --game-bg-position: 84%;
+    --game-bg-position-factor: 0.84;
+    --game-player-nudge-x: 0%;
+    --game-seat-width: 128px;
+  }
+
+  .game-seat-slot-1 {
+    left: 41.5%;
+  }
+
+  .game-seat-slot-2 {
+    left: 49.5%;
+  }
+
+  .game-seat-slot-3 {
+    left: 60.5%;
+  }
+
+  .game-seat-slot-4 {
+    left: 69.5%;
+  }
+}
+
+@media (min-aspect-ratio: 793/336) {
+  .game-image-layer {
+    --game-bg-rendered-height: calc(100vw * 672 / 1586);
+    height: var(--game-bg-rendered-height);
+    left: 0;
+    top: calc((100vh - var(--game-bg-rendered-height)) / 2);
+    width: 100vw;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   html {
     color-scheme: dark;

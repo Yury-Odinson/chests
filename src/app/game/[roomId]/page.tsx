@@ -203,7 +203,7 @@ function Header({
 function LobbyScene({ state }: { state: ClientGameState }) {
   return (
     <section
-      className="absolute inset-0 overflow-hidden bg-stone-950 bg-cover bg-center"
+      className="game-scene-bg absolute inset-0 overflow-hidden bg-stone-950 bg-cover"
       style={{
         backgroundImage:
           "linear-gradient(180deg, rgba(9, 6, 5, 0.1) 0%, rgba(9, 6, 5, 0.22) 58%, rgba(9, 6, 5, 0.7) 100%), url('/game-bg.png')",
@@ -276,7 +276,7 @@ function PlayArea({
 
   return (
     <section
-      className="absolute inset-0 overflow-hidden bg-stone-950 bg-cover bg-center"
+      className="game-scene-bg absolute inset-0 overflow-hidden bg-stone-950 bg-cover"
       style={{
         backgroundImage:
           "linear-gradient(180deg, rgba(9, 6, 5, 0.06) 0%, rgba(9, 6, 5, 0.16) 58%, rgba(9, 6, 5, 0.58) 100%), url('/game-bg.png')",
@@ -306,34 +306,36 @@ function PlayArea({
         <GameLog items={state.log} variant="table" />
       </div>
 
-      {opponents.slice(0, OPPONENT_SEAT_SLOTS.length).map((player, index) => {
-        const isSelectable =
-          isOwnAskStage && possibleTargets.some((p) => p.id === player.id);
+      <div className="game-image-layer pointer-events-none absolute z-30">
+        {opponents.slice(0, OPPONENT_SEAT_SLOTS.length).map((player, index) => {
+          const isSelectable =
+            isOwnAskStage && possibleTargets.some((p) => p.id === player.id);
 
-        return (
-          <TableSeat
-            key={player.id}
-            player={player}
-            isCurrent={state.currentPlayerId === player.id}
-            isSelectable={isSelectable}
-            isSelected={activeTargetId === player.id}
-            isDimmed={isChoosingTarget && !isSelectable}
-            slot={OPPONENT_SEAT_SLOTS[index]}
-            onSelect={() => setSelectedTargetId(player.id)}
+          return (
+            <TableSeat
+              key={player.id}
+              player={player}
+              isCurrent={state.currentPlayerId === player.id}
+              isSelectable={isSelectable}
+              isSelected={activeTargetId === player.id}
+              isDimmed={isChoosingTarget && !isSelectable}
+              slot={OPPONENT_SEAT_SLOTS[index]}
+              onSelect={() => setSelectedTargetId(player.id)}
+            />
+          );
+        })}
+
+        <div className="game-table-control pointer-events-auto absolute top-[52%] z-40 w-[420px] -translate-x-1/2 -translate-y-1/2">
+          <AskFlow
+            state={state}
+            socket={socket}
+            selectedTargetId={activeTargetId}
+            onTargetSelect={setSelectedTargetId}
           />
-        );
-      })}
+        </div>
 
-      <div className="absolute left-[55%] top-[52%] z-40 w-[420px] -translate-x-1/2 -translate-y-1/2">
-        <AskFlow
-          state={state}
-          socket={socket}
-          selectedTargetId={activeTargetId}
-          onTargetSelect={setSelectedTargetId}
-        />
+        <MySeat state={state} />
       </div>
-
-      <MySeat state={state} />
     </section>
   );
 }
@@ -345,19 +347,19 @@ interface OpponentSeatSlot {
 
 const OPPONENT_SEAT_SLOTS: OpponentSeatSlot[] = [
   {
-    positionClassName: "left-[40.5%] top-[53%]",
+    positionClassName: "game-seat-slot-1",
     tiltClassName: "-rotate-3",
   },
   {
-    positionClassName: "left-[48%] top-[41%]",
+    positionClassName: "game-seat-slot-2",
     tiltClassName: "-rotate-1",
   },
   {
-    positionClassName: "left-[61.5%] top-[41%]",
+    positionClassName: "game-seat-slot-3",
     tiltClassName: "rotate-1",
   },
   {
-    positionClassName: "left-[70%] top-[53%]",
+    positionClassName: "game-seat-slot-4",
     tiltClassName: "rotate-3",
   },
 ];
@@ -380,7 +382,7 @@ function TableSeat({
   onSelect: () => void;
 }) {
   const className = [
-    "absolute w-[164px] -translate-x-1/2 -translate-y-1/2 rounded-xl border px-2.5 py-2 text-left text-amber-50 shadow-[0_18px_48px_rgba(0,0,0,0.44)] backdrop-blur-[2px] transition",
+    "game-player-seat pointer-events-auto absolute -translate-x-1/2 -translate-y-1/2 rounded-xl border px-2.5 py-2 text-left text-amber-50 shadow-[0_18px_48px_rgba(0,0,0,0.44)] backdrop-blur-[2px] transition",
     isSelectable ? "z-30 cursor-pointer" : "z-10",
     isDimmed ? "opacity-45" : "opacity-100",
     "bg-[#1d130d]/78",
@@ -480,7 +482,7 @@ function MySeat({ state }: { state: ClientGameState }) {
   return (
     <section
       className={[
-        "absolute bottom-4 left-1/2 z-10 w-[700px] -translate-x-1/2 rounded-2xl border bg-[#160f0b]/82 p-2.5 text-amber-50 shadow-[0_24px_80px_rgba(0,0,0,0.52)] backdrop-blur-[3px]",
+        "game-my-seat absolute bottom-4 z-10 w-[700px] -translate-x-1/2 rounded-2xl border bg-[#160f0b]/82 p-2.5 text-amber-50 shadow-[0_24px_80px_rgba(0,0,0,0.52)] backdrop-blur-[3px]",
         isCurrent
           ? "border-amber-300/85 ring-2 ring-amber-300/40"
           : "border-amber-100/18",
