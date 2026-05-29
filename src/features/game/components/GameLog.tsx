@@ -50,10 +50,10 @@ export function GameLog({
   return (
     <div
       className={[
-        "flex h-full flex-col overflow-hidden rounded-xl border",
+        "flex h-full flex-col overflow-hidden border",
         variant === "table"
-          ? "border-amber-100/20 bg-[#160f0b]/86 text-amber-50 shadow-[0_18px_56px_rgba(0,0,0,0.44)] backdrop-blur-[3px]"
-          : "border-[var(--card-border)] bg-[var(--card-bg)]",
+          ? "border-y-0 border-r-0 border-amber-100/20 bg-[#160f0b]/86 text-amber-50 shadow-[0_18px_56px_rgba(0,0,0,0.44)] backdrop-blur-[3px]"
+          : "rounded-xl border-[var(--card-border)] bg-[var(--card-bg)]",
       ].join(" ")}
     >
       <div

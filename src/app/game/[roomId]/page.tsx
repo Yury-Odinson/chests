@@ -44,7 +44,16 @@ export default function GamePage({
   if (!socket) return null;
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-[1680px] min-w-[1180px] flex-col gap-4 px-6 py-4">
+    <main className="relative h-screen w-screen overflow-hidden bg-stone-950">
+      {state.status === "waiting" ? (
+        <LobbyScene state={state} />
+      ) : (
+        <PlayArea
+          state={state}
+          socket={socket}
+        />
+      )}
+
       <Header
         roomId={roomId}
         statusText={statusLabel(state.status)}
@@ -63,16 +72,8 @@ export default function GamePage({
         canFinish={state.status === "playing"}
         onStart={() => socket.emit("room:start", { roomId })}
         onFinish={() => socket.emit("room:finish", { roomId })}
+        reserveRight={state.status !== "waiting"}
       />
-
-      {state.status === "waiting" ? (
-        <Lobby state={state} />
-      ) : (
-        <PlayArea
-          state={state}
-          socket={socket}
-        />
-      )}
 
       {error && (
         <div className="fixed inset-x-0 top-2 z-30 mx-auto w-fit max-w-sm rounded-lg border border-red-400/40 bg-red-50 px-3 py-2 text-sm text-red-700 shadow dark:bg-red-900/40 dark:text-red-200">
@@ -118,6 +119,7 @@ function Header({
   canFinish,
   onStart,
   onFinish,
+  reserveRight,
 }: {
   roomId: string;
   statusText: string;
@@ -128,6 +130,7 @@ function Header({
   canFinish: boolean;
   onStart: () => void;
   onFinish: () => void;
+  reserveRight: boolean;
 }) {
   const isHost = hostId === meId;
   const [copied, setCopied] = useState(false);
@@ -144,20 +147,25 @@ function Header({
   };
 
   return (
-    <header className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] px-4 py-2">
+    <header
+      className={[
+        "absolute left-4 top-4 z-50 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-100/20 bg-[#160f0b]/82 px-4 py-2 text-amber-50 shadow-[0_18px_56px_rgba(0,0,0,0.44)] backdrop-blur-[3px]",
+        reserveRight ? "right-[376px]" : "right-4",
+      ].join(" ")}
+    >
       <div className="flex items-center gap-3">
-        <span className="text-xs uppercase opacity-60">комната</span>
+        <span className="text-xs uppercase text-amber-50/55">комната</span>
         <span className="font-mono text-lg font-semibold tracking-widest">
           {roomId}
         </span>
         <button
           type="button"
           onClick={copy}
-          className="rounded-md border border-[var(--card-border)] px-2 py-0.5 text-xs hover:border-[var(--accent)]"
+          className="rounded-md border border-amber-100/20 px-2 py-0.5 text-xs text-amber-50/78 transition hover:border-amber-200/70 hover:text-amber-50"
         >
           {copied ? "скопировано" : "скопировать ссылку"}
         </button>
-        <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-xs dark:bg-zinc-700">
+        <span className="rounded-full bg-amber-100/14 px-2 py-0.5 text-xs text-amber-50/78">
           {statusText}
         </span>
       </div>
@@ -166,7 +174,7 @@ function Header({
           <button
             type="button"
             onClick={onStart}
-            className="rounded-md bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-white"
+            className="rounded-md bg-amber-300 px-3 py-1.5 text-sm font-medium text-stone-950 transition hover:bg-amber-200"
           >
             Начать игру
           </button>
@@ -175,7 +183,7 @@ function Header({
           <button
             type="button"
             onClick={onFinish}
-            className="rounded-md border border-red-400/60 px-3 py-1.5 text-sm text-red-700 dark:text-red-300"
+            className="rounded-md border border-red-300/60 px-3 py-1.5 text-sm text-red-100 transition hover:border-red-200 hover:bg-red-950/30"
           >
             Завершить
           </button>
@@ -183,12 +191,29 @@ function Header({
         <button
           type="button"
           onClick={onLeave}
-          className="rounded-md border border-[var(--card-border)] px-3 py-1.5 text-sm"
+          className="rounded-md border border-amber-100/20 px-3 py-1.5 text-sm text-amber-50/82 transition hover:border-amber-200/70 hover:text-amber-50"
         >
           Выйти
         </button>
       </div>
     </header>
+  );
+}
+
+function LobbyScene({ state }: { state: ClientGameState }) {
+  return (
+    <section
+      className="absolute inset-0 overflow-hidden bg-stone-950 bg-cover bg-center"
+      style={{
+        backgroundImage:
+          "linear-gradient(180deg, rgba(9, 6, 5, 0.1) 0%, rgba(9, 6, 5, 0.22) 58%, rgba(9, 6, 5, 0.7) 100%), url('/game-bg.png')",
+      }}
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_56%_54%,rgba(255,190,96,0.08),rgba(0,0,0,0)_34%),linear-gradient(90deg,rgba(0,0,0,0.3),rgba(0,0,0,0)_25%,rgba(0,0,0,0)_75%,rgba(0,0,0,0.28))]" />
+      <div className="absolute left-1/2 top-1/2 z-10 w-[520px] -translate-x-1/2 -translate-y-1/2">
+        <Lobby state={state} />
+      </div>
+    </section>
   );
 }
 
@@ -251,7 +276,7 @@ function PlayArea({
 
   return (
     <section
-      className="relative aspect-[1586/672] min-h-[640px] overflow-hidden rounded-2xl border border-stone-950/40 bg-stone-950 bg-cover bg-center shadow-2xl"
+      className="absolute inset-0 overflow-hidden bg-stone-950 bg-cover bg-center"
       style={{
         backgroundImage:
           "linear-gradient(180deg, rgba(9, 6, 5, 0.06) 0%, rgba(9, 6, 5, 0.16) 58%, rgba(9, 6, 5, 0.58) 100%), url('/game-bg.png')",
@@ -263,7 +288,7 @@ function PlayArea({
         <div className="pointer-events-none absolute inset-0 z-20 bg-black/48" />
       )}
 
-      <div className="absolute left-5 top-5 z-30 flex items-center gap-2 rounded-xl border border-amber-200/20 bg-zinc-950/62 px-3 py-2 text-sm text-amber-50 shadow-lg backdrop-blur-[2px]">
+      <div className="absolute left-4 top-20 z-30 flex items-center gap-2 rounded-xl border border-amber-200/20 bg-zinc-950/62 px-3 py-2 text-sm text-amber-50 shadow-lg backdrop-blur-[2px]">
         <span>
           <span className="text-amber-100/60">колода:</span>{" "}
           <span className="font-semibold">{state.deckCount}</span>
