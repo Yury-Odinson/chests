@@ -1,14 +1,14 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useGameSocket } from "@/features/game/SocketProvider";
 import { AskFlow } from "@/features/game/components/AskFlow";
 import { ChestsList } from "@/features/game/components/ChestsList";
 import { GameLog } from "@/features/game/components/GameLog";
 import { MyHand } from "@/features/game/components/MyHand";
-import { OpponentTile } from "@/features/game/components/OpponentTile";
 import { WinnerOverlay } from "@/features/game/components/WinnerOverlay";
+import type { ClientGameState, PublicPlayer } from "@/shared/types/game";
 
 export default function GamePage({
   params,
@@ -22,7 +22,6 @@ export default function GamePage({
     connected,
     state,
     error,
-    recentLogs,
     session,
     setSession,
     clearError,
@@ -45,7 +44,7 @@ export default function GamePage({
   if (!socket) return null;
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-4 px-4 py-4">
+    <main className="mx-auto flex min-h-screen w-full max-w-[1680px] min-w-[1180px] flex-col gap-4 px-6 py-4">
       <Header
         roomId={roomId}
         statusText={statusLabel(state.status)}
@@ -196,7 +195,7 @@ function Header({
 function Lobby({
   state,
 }: {
-  state: import("@/shared/types/game").ClientGameState;
+  state: ClientGameState;
 }) {
   return (
     <section className="rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] p-4">
@@ -233,54 +232,261 @@ function PlayArea({
   state,
   socket,
 }: {
-  state: import("@/shared/types/game").ClientGameState;
+  state: ClientGameState;
   socket: NonNullable<ReturnType<typeof useGameSocket>["socket"]>;
 }) {
   const opponents = state.players.filter((p) => p.id !== state.me.id);
+  const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
+  const possibleTargets = opponents.filter((p) => p.cardsCount > 0);
+  const isOwnAskStage =
+    state.currentPlayerId === state.me.id && !state.pendingGuess;
+  const validSelectedTargetId = possibleTargets.some(
+    (p) => p.id === selectedTargetId
+  )
+    ? selectedTargetId
+    : null;
+  const activeTargetId = isOwnAskStage ? validSelectedTargetId : null;
+  const isChoosingTarget =
+    isOwnAskStage && possibleTargets.length > 0 && !activeTargetId;
+
   return (
-    <>
-      <section className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3">
-        {opponents.map((p) => (
-          <OpponentTile
-            key={p.id}
-            player={p}
-            isCurrent={state.currentPlayerId === p.id}
+    <section
+      className="relative aspect-[1586/672] min-h-[640px] overflow-hidden rounded-2xl border border-stone-950/40 bg-stone-950 bg-cover bg-center shadow-2xl"
+      style={{
+        backgroundImage:
+          "linear-gradient(180deg, rgba(9, 6, 5, 0.06) 0%, rgba(9, 6, 5, 0.16) 58%, rgba(9, 6, 5, 0.58) 100%), url('/game-bg.png')",
+      }}
+    >
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_56%_54%,rgba(255,190,96,0.08),rgba(0,0,0,0)_34%),linear-gradient(90deg,rgba(0,0,0,0.28),rgba(0,0,0,0)_25%,rgba(0,0,0,0)_75%,rgba(0,0,0,0.26))]" />
+
+      {isChoosingTarget && (
+        <div className="pointer-events-none absolute inset-0 z-20 bg-black/48" />
+      )}
+
+      <div className="absolute left-5 top-5 z-30 flex items-center gap-2 rounded-xl border border-amber-200/20 bg-zinc-950/62 px-3 py-2 text-sm text-amber-50 shadow-lg backdrop-blur-[2px]">
+        <span>
+          <span className="text-amber-100/60">колода:</span>{" "}
+          <span className="font-semibold">{state.deckCount}</span>
+        </span>
+        <span className="h-5 w-px bg-amber-100/20" />
+        <span>
+          <span className="text-amber-100/60">сундуки:</span>{" "}
+          <span className="font-semibold">
+            {state.players.reduce((s, p) => s + p.chests.length, 0)}/13
+          </span>
+        </span>
+      </div>
+
+      <div className="absolute right-0 top-0 z-40 h-full w-[360px]">
+        <GameLog items={state.log} variant="table" />
+      </div>
+
+      {opponents.slice(0, OPPONENT_SEAT_SLOTS.length).map((player, index) => {
+        const isSelectable =
+          isOwnAskStage && possibleTargets.some((p) => p.id === player.id);
+
+        return (
+          <TableSeat
+            key={player.id}
+            player={player}
+            isCurrent={state.currentPlayerId === player.id}
+            isSelectable={isSelectable}
+            isSelected={activeTargetId === player.id}
+            isDimmed={isChoosingTarget && !isSelectable}
+            slot={OPPONENT_SEAT_SLOTS[index]}
+            onSelect={() => setSelectedTargetId(player.id)}
           />
-        ))}
-      </section>
+        );
+      })}
 
-      <section className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_320px]">
-        <div className="flex flex-col gap-3">
-          <AskFlow state={state} socket={socket} />
-          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] p-3 text-sm">
-            <span>
-              <span className="opacity-60">колода:</span>{" "}
-              <span className="font-semibold">{state.deckCount}</span>
-            </span>
-            <span>
-              <span className="opacity-60">сундуков собрано:</span>{" "}
-              <span className="font-semibold">
-                {state.players.reduce((s, p) => s + p.chests.length, 0)}/13
-              </span>
-            </span>
+      <div className="absolute left-[55%] top-[52%] z-40 w-[420px] -translate-x-1/2 -translate-y-1/2">
+        <AskFlow
+          state={state}
+          socket={socket}
+          selectedTargetId={activeTargetId}
+          onTargetSelect={setSelectedTargetId}
+        />
+      </div>
+
+      <MySeat state={state} />
+    </section>
+  );
+}
+
+interface OpponentSeatSlot {
+  positionClassName: string;
+  tiltClassName: string;
+}
+
+const OPPONENT_SEAT_SLOTS: OpponentSeatSlot[] = [
+  {
+    positionClassName: "left-[40.5%] top-[53%]",
+    tiltClassName: "-rotate-3",
+  },
+  {
+    positionClassName: "left-[48%] top-[41%]",
+    tiltClassName: "-rotate-1",
+  },
+  {
+    positionClassName: "left-[61.5%] top-[41%]",
+    tiltClassName: "rotate-1",
+  },
+  {
+    positionClassName: "left-[70%] top-[53%]",
+    tiltClassName: "rotate-3",
+  },
+];
+
+function TableSeat({
+  player,
+  isCurrent,
+  isSelectable,
+  isSelected,
+  isDimmed,
+  slot,
+  onSelect,
+}: {
+  player: PublicPlayer;
+  isCurrent: boolean;
+  isSelectable: boolean;
+  isSelected: boolean;
+  isDimmed: boolean;
+  slot: OpponentSeatSlot;
+  onSelect: () => void;
+}) {
+  const className = [
+    "absolute w-[164px] -translate-x-1/2 -translate-y-1/2 rounded-xl border px-2.5 py-2 text-left text-amber-50 shadow-[0_18px_48px_rgba(0,0,0,0.44)] backdrop-blur-[2px] transition",
+    isSelectable ? "z-30 cursor-pointer" : "z-10",
+    isDimmed ? "opacity-45" : "opacity-100",
+    "bg-[#1d130d]/78",
+    isSelected
+      ? "border-amber-200 ring-2 ring-amber-200/70"
+      : isCurrent
+        ? "border-amber-300/80 ring-2 ring-amber-300/45"
+        : isSelectable
+          ? "border-amber-200/60 ring-2 ring-amber-200/30 hover:border-amber-100 hover:ring-amber-100/50"
+          : "border-amber-100/18",
+    slot.positionClassName,
+    slot.tiltClassName,
+  ].join(" ");
+
+  const content = (
+    <>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <span
+            className={[
+              "grid h-8 w-8 shrink-0 place-items-center rounded-full border text-xs font-semibold shadow-inner",
+              player.connected
+                ? "border-emerald-200/40 bg-emerald-900/65 text-emerald-50"
+                : "border-zinc-300/20 bg-zinc-900/70 text-zinc-300",
+            ].join(" ")}
+            title={player.connected ? "онлайн" : "офлайн"}
+          >
+            {player.name.trim().slice(0, 1).toUpperCase() || "?"}
+          </span>
+          <div className="min-w-0">
+            <div className="truncate text-sm font-semibold leading-tight">
+              {player.name}
+            </div>
+            <div className="mt-0.5 flex items-center gap-1 text-[10px] text-amber-50/62">
+              {player.isHost && <span>хост</span>}
+              {!player.connected && <span>офлайн</span>}
+            </div>
           </div>
         </div>
-        <div className="h-96 md:h-[420px]">
-          <GameLog items={state.log} />
-        </div>
-      </section>
+        {isCurrent && (
+          <span className="rounded-full bg-amber-300 px-1.5 py-0.5 text-[10px] font-semibold text-stone-950">
+            ход
+          </span>
+        )}
+      </div>
 
-      <section className="rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] p-3">
-        <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-sm font-semibold">Ваши карты</h3>
-          <div className="flex items-center gap-2 text-xs">
-            <span className="opacity-60">сундуки:</span>
-            <ChestsList chests={state.me.chests} />
-          </div>
-        </div>
-        <MyHand hand={state.me.hand} />
-      </section>
+      <MiniCardFan count={player.cardsCount} />
+
+      <div className="mt-2 border-t border-amber-100/12 pt-2">
+        <ChestsList chests={player.chests} />
+      </div>
     </>
+  );
+
+  if (isSelectable) {
+    return (
+      <button type="button" onClick={onSelect} className={className}>
+        {content}
+      </button>
+    );
+  }
+
+  return (
+    <article className={className}>
+      {content}
+    </article>
+  );
+}
+
+function MiniCardFan({ count }: { count: number }) {
+  const visibleCards = Array.from({ length: Math.min(count, 5) });
+
+  return (
+    <div className="mt-2 flex h-8 items-end">
+      {visibleCards.map((_, index) => (
+        <span
+          key={index}
+          className="h-7 w-5 rounded-[4px] border border-emerald-950/70 bg-gradient-to-br from-emerald-700 to-emerald-950 shadow-sm"
+          style={{
+            marginLeft: index === 0 ? 0 : -8,
+            transform: `rotate(${(index - visibleCards.length / 2) * 4}deg)`,
+          }}
+        />
+      ))}
+      {count > 5 && (
+        <span className="ml-2 self-center rounded-full border border-amber-100/14 bg-stone-950/32 px-1.5 py-0.5 text-[10px] text-amber-50/72">
+          {count} карт
+        </span>
+      )}
+    </div>
+  );
+}
+
+function MySeat({ state }: { state: ClientGameState }) {
+  const isCurrent = state.currentPlayerId === state.me.id;
+
+  return (
+    <section
+      className={[
+        "absolute bottom-4 left-1/2 z-10 w-[700px] -translate-x-1/2 rounded-2xl border bg-[#160f0b]/82 p-2.5 text-amber-50 shadow-[0_24px_80px_rgba(0,0,0,0.52)] backdrop-blur-[3px]",
+        isCurrent
+          ? "border-amber-300/85 ring-2 ring-amber-300/40"
+          : "border-amber-100/18",
+      ].join(" ")}
+    >
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-amber-200/40 bg-amber-700/70 text-sm font-semibold text-amber-50 shadow-inner">
+            {state.me.name.trim().slice(0, 1).toUpperCase() || "?"}
+          </span>
+          <div className="min-w-0">
+            <h3 className="truncate text-sm font-semibold leading-tight">
+              {state.me.name}
+            </h3>
+            <p className="text-xs text-amber-50/62">ваше место за столом</p>
+          </div>
+          {isCurrent && (
+            <span className="rounded-full bg-amber-300 px-2 py-0.5 text-xs font-semibold text-stone-950">
+              ваш ход
+            </span>
+          )}
+        </div>
+        <div className="flex min-w-0 items-center gap-2 text-xs">
+          <span className="shrink-0 text-amber-50/62">сундуки:</span>
+          <ChestsList chests={state.me.chests} />
+        </div>
+      </div>
+      <div className="overflow-x-auto rounded-xl border border-amber-100/12 bg-stone-950/26 p-2">
+        <MyHand hand={state.me.hand} compact />
+      </div>
+    </section>
   );
 }
 

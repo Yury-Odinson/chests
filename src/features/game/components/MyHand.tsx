@@ -2,7 +2,13 @@ import type { Card, Rank } from "@/shared/types/game";
 import { RANKS } from "@/shared/types/game";
 import { PlayingCard } from "./PlayingCard";
 
-export function MyHand({ hand }: { hand: Card[] }) {
+export function MyHand({
+  hand,
+  compact = false,
+}: {
+  hand: Card[];
+  compact?: boolean;
+}) {
   if (hand.length === 0) {
     return (
       <p className="text-sm opacity-60">У вас нет карт на руке.</p>
@@ -26,11 +32,14 @@ export function MyHand({ hand }: { hand: Card[] }) {
   }
 
   return (
-    <div className="flex flex-wrap items-end gap-3">
+    <div className={compact ? "flex flex-wrap items-end gap-2" : "flex flex-wrap items-end gap-3"}>
       {grouped.map((group, gi) => (
-        <div key={`${group[0].rank}-${gi}`} className="flex gap-1">
+        <div
+          key={`${group[0].rank}-${gi}`}
+          className={compact ? "flex gap-0.5" : "flex gap-1"}
+        >
           {group.map((c) => (
-            <PlayingCard key={c.id} card={c} />
+            <PlayingCard key={c.id} card={c} size={compact ? "small" : "default"} />
           ))}
         </div>
       ))}

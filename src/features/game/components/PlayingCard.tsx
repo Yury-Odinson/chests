@@ -26,6 +26,7 @@ interface PlayingCardProps {
   onClick?: () => void;
   selected?: boolean;
   disabled?: boolean;
+  size?: "default" | "small";
 }
 
 export function PlayingCard({
@@ -34,11 +35,18 @@ export function PlayingCard({
   onClick,
   selected,
   disabled,
+  size = "default",
 }: PlayingCardProps) {
+  const cardSizeClass = size === "small" ? "h-16 w-11" : "h-20 w-14";
+  const rankSizeClass = size === "small" ? "text-xs" : "text-sm";
+  const suitSizeClass = size === "small" ? "text-xl" : "text-2xl";
+
   if (faceDown || !card) {
     return (
-      <div className="flex h-20 w-14 items-center justify-center rounded-md border border-emerald-900/40 bg-gradient-to-br from-emerald-700 to-emerald-900 text-emerald-100/60 shadow-sm select-none">
-        <span className="text-2xl">♠</span>
+      <div
+        className={`flex ${cardSizeClass} items-center justify-center rounded-md border border-emerald-900/40 bg-gradient-to-br from-emerald-700 to-emerald-900 text-emerald-100/60 shadow-sm select-none`}
+      >
+        <span className={suitSizeClass}>♠</span>
       </div>
     );
   }
@@ -50,7 +58,7 @@ export function PlayingCard({
       onClick={clickable ? onClick : undefined}
       disabled={!clickable}
       className={[
-        "flex h-20 w-14 flex-col items-center justify-between rounded-md border bg-white px-1 py-1 shadow-sm transition",
+        `flex ${cardSizeClass} flex-col items-center justify-between rounded-md border bg-white px-1 py-1 shadow-sm transition`,
         selected
           ? "border-[var(--accent)] ring-2 ring-[var(--accent)]"
           : "border-zinc-300",
@@ -60,11 +68,15 @@ export function PlayingCard({
         suitColor(card.suit),
       ].join(" ")}
     >
-      <span className="self-start text-sm font-semibold leading-none">
+      <span className={`self-start ${rankSizeClass} font-semibold leading-none`}>
         {card.rank}
       </span>
-      <span className="text-2xl leading-none">{SUIT_SYMBOL[card.suit]}</span>
-      <span className="self-end text-sm font-semibold leading-none rotate-180">
+      <span className={`${suitSizeClass} leading-none`}>
+        {SUIT_SYMBOL[card.suit]}
+      </span>
+      <span
+        className={`self-end ${rankSizeClass} font-semibold leading-none rotate-180`}
+      >
         {card.rank}
       </span>
     </button>
