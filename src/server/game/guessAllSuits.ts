@@ -1,4 +1,5 @@
 import type { GameRoom, Suit } from "@/shared/types/game";
+import { forgetRankForTarget, observeSuitsAbsent } from "./botMemory";
 import { collectChests } from "./collectChests";
 import { drawCard } from "./drawCard";
 import { maybeFinish, passTurn } from "./finalize";
@@ -49,6 +50,8 @@ export function guessAllSuits(
       ...p,
       hand: [...p.hand, ...targetCards],
     }));
+    // All of the rank left the target — wipe any deductions about it.
+    next = { ...next, botMemory: forgetRankForTarget(next, targetId, rank) };
     const log = makeLog(
       `**${asker.name}** верно назвал все масти: **${args.suits.join(", ")}**. Забирает **${count}** карт.`,
       "success"
@@ -63,7 +66,11 @@ export function guessAllSuits(
     `**${asker.name}** назвал **${args.suits.join(", ")}**. Неверно: **${wrongSuits.join(", ")}**.`,
     "error"
   );
-  const draw = drawCard(room, args.askerId);
+  const observed: GameRoom = {
+    ...room,
+    botMemory: observeSuitsAbsent(room, targetId, rank, wrongSuits),
+  };
+  const draw = drawCard(observed, args.askerId);
   const turn = passTurn(draw.room, args.askerId);
   const final = maybeFinish(turn.room, [log, ...draw.logs, ...turn.logs]);
   return ok(final.room, final.logs);

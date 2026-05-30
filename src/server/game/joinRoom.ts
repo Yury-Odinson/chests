@@ -32,6 +32,7 @@ export function joinRoom(
     hand: [],
     chests: [],
     connected: true,
+    isBot: false,
   };
 
   const next: GameRoom = {

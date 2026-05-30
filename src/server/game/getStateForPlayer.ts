@@ -19,6 +19,7 @@ export function getStateForPlayer(
     chests: p.chests,
     connected: p.connected,
     isHost: p.id === room.hostId,
+    isBot: p.isBot,
   }));
 
   return {

@@ -5,6 +5,7 @@ import type {
   GameGuessCountPayload,
   GameGuessSuitPayload,
   GameGuessSuitsPayload,
+  RoomAddBotPayload,
   RoomCreatePayload,
   RoomFinishPayload,
   RoomJoinPayload,
@@ -15,6 +16,7 @@ import type {
   SocketData,
 } from "@/shared/types/events";
 import type { EngineResult } from "@/server/game/types";
+import { addBot } from "@/server/game/addBot";
 import { askRank } from "@/server/game/askRank";
 import { createRoom } from "@/server/game/createRoom";
 import { passTurn } from "@/server/game/finalize";
@@ -35,6 +37,7 @@ import {
   LOBBY_ROOM,
   type GameIO,
 } from "./broadcast";
+import { maybeScheduleBotTurn } from "./botRunner";
 
 type GameSocket = Socket<
   ClientToServerEvents,
@@ -59,6 +62,7 @@ function applyResult(
   roomsStore.set(result.room);
   broadcastLogs(io, result.room, result.logs);
   broadcastState(io, result.room);
+  maybeScheduleBotTurn(io, result.room.id);
 }
 
 export function registerHandlers(io: GameIO, socket: GameSocket): void {
@@ -166,6 +170,21 @@ export function registerHandlers(io: GameIO, socket: GameSocket): void {
     broadcastState(io, next);
   });
 
+  socket.on("room:add-bot", (payload: RoomAddBotPayload) => {
+    const room = roomsStore.get(payload.roomId);
+    if (!room) return emitError(socket, "Комната не найдена");
+    const playerId = socket.data.playerId;
+    if (!playerId) return emitError(socket, "Вы не в комнате");
+
+    const result = addBot(room, { hostId: playerId });
+    if (!result.ok) return emitError(socket, result.error);
+
+    roomsStore.set(result.room);
+    broadcastLogs(io, result.room, result.logs);
+    broadcastState(io, result.room);
+    broadcastLobby(io);
+  });
+
   socket.on("game:ask-rank", (payload: GameAskRankPayload) => {
     const room = roomsStore.get(payload.roomId);
     if (!room) return emitError(socket, "Комната не найдена");
@@ -258,11 +277,12 @@ function handleLeave(
     logs = [...logs, ...turn.logs];
   }
 
-  // A started/finished game nobody is connected to anymore is dead weight —
-  // drop it instead of leaving a stale room lingering in memory.
+  // A started/finished game no human is connected to anymore is dead weight —
+  // drop it instead of leaving bots playing to an empty room. (Bots are always
+  // `connected`, so we check specifically for a connected human.)
   if (
     finalRoom.status !== "waiting" &&
-    finalRoom.players.every((p) => !p.connected)
+    !finalRoom.players.some((p) => !p.isBot && p.connected)
   ) {
     roomsStore.delete(finalRoom.id);
     if (!isDisconnect) {
@@ -277,6 +297,7 @@ function handleLeave(
   broadcastLogs(io, finalRoom, logs);
   broadcastState(io, finalRoom);
   broadcastLobby(io);
+  maybeScheduleBotTurn(io, finalRoom.id);
 
   if (!isDisconnect) {
     socket.leave(room.id);

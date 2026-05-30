@@ -46,7 +46,7 @@ export default function GamePage({
   return (
     <main className="relative h-screen w-screen overflow-hidden bg-stone-950">
       {state.status === "waiting" ? (
-        <LobbyScene state={state} />
+        <LobbyScene state={state} socket={socket} />
       ) : (
         <PlayArea
           state={state}
@@ -200,7 +200,13 @@ function Header({
   );
 }
 
-function LobbyScene({ state }: { state: ClientGameState }) {
+function LobbyScene({
+  state,
+  socket,
+}: {
+  state: ClientGameState;
+  socket: NonNullable<ReturnType<typeof useGameSocket>["socket"]>;
+}) {
   return (
     <section
       className="game-scene-bg absolute inset-0 overflow-hidden bg-stone-950 bg-cover"
@@ -211,7 +217,7 @@ function LobbyScene({ state }: { state: ClientGameState }) {
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_56%_54%,rgba(255,190,96,0.08),rgba(0,0,0,0)_34%),linear-gradient(90deg,rgba(0,0,0,0.3),rgba(0,0,0,0)_25%,rgba(0,0,0,0)_75%,rgba(0,0,0,0.28))]" />
       <div className="absolute left-1/2 top-1/2 z-10 w-[520px] -translate-x-1/2 -translate-y-1/2">
-        <Lobby state={state} />
+        <Lobby state={state} socket={socket} />
       </div>
     </section>
   );
@@ -219,9 +225,14 @@ function LobbyScene({ state }: { state: ClientGameState }) {
 
 function Lobby({
   state,
+  socket,
 }: {
   state: ClientGameState;
+  socket: NonNullable<ReturnType<typeof useGameSocket>["socket"]>;
 }) {
+  const isHost = state.hostId === state.me.id;
+  const canAddBot = isHost && state.players.length < 5;
+
   return (
     <section className="rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] p-4">
       <h2 className="text-lg font-semibold">Игроки ({state.players.length}/5)</h2>
@@ -239,6 +250,11 @@ function Lobby({
                 className={`inline-block h-2 w-2 rounded-full ${p.connected ? "bg-emerald-500" : "bg-zinc-400"}`}
               />
               <span className="font-medium">{p.name}</span>
+              {p.isBot && (
+                <span className="rounded-full bg-amber-300/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-200">
+                  бот
+                </span>
+              )}
               {p.id === state.hostId && (
                 <span className="text-xs opacity-60">(хост)</span>
               )}
@@ -249,6 +265,15 @@ function Lobby({
           </li>
         ))}
       </ul>
+      {canAddBot && (
+        <button
+          type="button"
+          onClick={() => socket.emit("room:add-bot", { roomId: state.roomId })}
+          className="mt-3 w-full rounded-lg border border-amber-200/40 px-3 py-2 text-sm font-medium text-amber-100 transition hover:border-amber-200 hover:bg-amber-950/30"
+        >
+          + Добавить бота
+        </button>
+      )}
     </section>
   );
 }
@@ -436,6 +461,7 @@ function TableSeat({
               {player.name}
             </div>
             <div className="mt-0.5 flex items-center gap-1 text-[10px] text-amber-50/62">
+              {player.isBot && <span className="text-amber-200">бот</span>}
               {player.isHost && <span>хост</span>}
               {!player.connected && <span>офлайн</span>}
             </div>

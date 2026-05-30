@@ -38,6 +38,7 @@ function makePlayer(over: Partial<Player> & Pick<Player, "id" | "name">): Player
     hand: [],
     chests: [],
     connected: true,
+    isBot: false,
     ...over,
   };
 }
@@ -58,6 +59,7 @@ function makeRoom(over: Partial<GameRoom> = {}): GameRoom {
     winnerIds: [],
     log: [],
     createdAt: "2026-05-28T00:00:00Z",
+    botMemory: {},
     ...over,
   };
 }

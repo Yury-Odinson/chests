@@ -13,11 +13,15 @@ export function leaveRoom(
 
   if (room.status === "waiting") {
     const remaining = room.players.filter((p) => p.id !== args.playerId);
-    if (remaining.length === 0) {
+    // A lobby with only bots left has no one to run it — tear it down.
+    if (remaining.every((p) => p.isBot)) {
       return { ok: true, room, logs: [], destroyed: true };
     }
+    // Host left: hand the room to the next human (bots can't host).
     const nextHostId =
-      room.hostId === args.playerId ? remaining[0].id : room.hostId;
+      room.hostId === args.playerId
+        ? remaining.find((p) => !p.isBot)!.id
+        : room.hostId;
     const next: GameRoom = {
       ...room,
       players: remaining,

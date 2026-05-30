@@ -31,7 +31,8 @@ export const roomsStore = {
   sweep(maxAgeMs: number, now: number = Date.now()): number {
     let removed = 0;
     for (const room of rooms.values()) {
-      const empty = room.players.every((p) => !p.connected);
+      // Bots are always "connected"; a room is only truly empty if no human is.
+      const empty = !room.players.some((p) => !p.isBot && p.connected);
       const stale = now - new Date(room.createdAt).getTime() > maxAgeMs;
       if (empty && stale) {
         rooms.delete(room.id);

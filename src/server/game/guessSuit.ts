@@ -1,4 +1,5 @@
 import type { GameRoom, Suit } from "@/shared/types/game";
+import { forgetRankForTarget, observeSuitAbsent } from "./botMemory";
 import { collectChests } from "./collectChests";
 import { drawCard } from "./drawCard";
 import { maybeFinish, passTurn } from "./finalize";
@@ -40,6 +41,8 @@ export function guessSuit(
       ...p,
       hand: [...p.hand, card],
     }));
+    // The rank's distribution at the target just changed — drop stale memory.
+    next = { ...next, botMemory: forgetRankForTarget(next, targetId, rank) };
     const askLog = makeLog(
       `**${asker.name}** назвал **${rank} ${args.suit}** — есть. Забирает карту, ход продолжается.`,
       "success"
@@ -54,7 +57,11 @@ export function guessSuit(
     `**${asker.name}** назвал **${rank} ${args.suit}** — у **${target.name}** этой масти нет.`,
     "error"
   );
-  const draw = drawCard(room, args.askerId);
+  const observed: GameRoom = {
+    ...room,
+    botMemory: observeSuitAbsent(room, targetId, rank, args.suit),
+  };
+  const draw = drawCard(observed, args.askerId);
   const turn = passTurn(draw.room, args.askerId);
   const final = maybeFinish(turn.room, [missLog, ...draw.logs, ...turn.logs]);
   return ok(final.room, final.logs);

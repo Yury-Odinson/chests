@@ -1,4 +1,5 @@
 import type { GameRoom } from "@/shared/types/game";
+import { observeCountCorrect, observeCountWrong } from "./botMemory";
 import { drawCard } from "./drawCard";
 import { maybeFinish, passTurn } from "./finalize";
 import {
@@ -41,6 +42,7 @@ export function guessCount(
     );
     const next: GameRoom = {
       ...room,
+      botMemory: observeCountCorrect(room, targetId, rank, actual),
       pendingGuess: {
         stage: "awaiting-suits",
         askerId: args.askerId,
@@ -56,7 +58,11 @@ export function guessCount(
     `**${asker.name}** сказал **${args.count}**, а на самом деле **${actual}**.`,
     "error"
   );
-  const draw = drawCard(room, args.askerId);
+  const observed: GameRoom = {
+    ...room,
+    botMemory: observeCountWrong(room, targetId, rank, args.count, actual),
+  };
+  const draw = drawCard(observed, args.askerId);
   const turn = passTurn(draw.room, args.askerId);
   const final = maybeFinish(turn.room, [log, ...draw.logs, ...turn.logs]);
   return ok(final.room, final.logs);
