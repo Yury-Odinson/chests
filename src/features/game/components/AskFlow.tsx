@@ -204,14 +204,10 @@ function DetailStage({
   targetName: string;
   rank: Rank;
 }) {
-  const [path, setPath] = useState<"suit" | "count" | null>(null);
   const me = state.me;
   const askerCount = me.hand.filter((c) => c.rank === rank).length;
   const maxPossible = 4 - askerCount;
 
-  const sendSuit = (suit: Suit) => {
-    socket.emit("game:guess-suit", { roomId: state.roomId, suit });
-  };
   const sendCount = (count: number) => {
     socket.emit("game:guess-count", { roomId: state.roomId, count });
   };
@@ -220,89 +216,27 @@ function DetailStage({
     <div className={`${TABLE_PANEL_CLASS} space-y-3`}>
       <p className="text-sm">
         У <span className="font-medium">{targetName}</span> есть карты ранга{" "}
-        <span className="font-bold">{rank}</span>. Что уточняем?
+        <span className="font-bold">{rank}</span>. Сколько именно?
       </p>
 
-      {!path && (
+      <div className="space-y-2">
+        <p className={`text-sm ${SECONDARY_TEXT_CLASS}`}>
+          Угадайте количество карт ранга {rank} (от 1 до {maxPossible}). Угадаете
+          — назовёте масти и заберёте их.
+        </p>
         <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setPath("suit")}
-            className="flex-1 rounded-lg border border-amber-100/20 bg-amber-50 p-3 text-sm text-stone-950 transition hover:border-amber-200 hover:bg-white"
-          >
-            <span className="font-semibold">Масть</span>
-            <span className="block text-xs text-stone-700">
-              забрать 1 карту, ход остаётся
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setPath("count")}
-            className="flex-1 rounded-lg border border-amber-100/20 bg-amber-50 p-3 text-sm text-stone-950 transition hover:border-amber-200 hover:bg-white"
-          >
-            <span className="font-semibold">Количество</span>
-            <span className="block text-xs text-stone-700">
-              забрать все, но угадать каждую масть
-            </span>
-          </button>
+          {Array.from({ length: maxPossible }, (_, i) => i + 1).map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => sendCount(n)}
+              className="flex-1 rounded-lg border border-amber-100/20 bg-amber-50 p-3 text-xl font-semibold text-stone-950 transition hover:border-amber-200 hover:bg-white"
+            >
+              {n}
+            </button>
+          ))}
         </div>
-      )}
-
-      {path === "suit" && (
-        <div className="space-y-2">
-          <p className={`text-sm ${SECONDARY_TEXT_CLASS}`}>Назовите масть:</p>
-          <div className="flex gap-2">
-            {SUITS.map((suit) => (
-              <button
-                key={suit}
-                type="button"
-                onClick={() => sendSuit(suit)}
-                className={[
-                  "flex flex-1 flex-col items-center gap-1 rounded-lg border border-amber-100/20 bg-amber-50 p-3 transition hover:border-amber-200 hover:bg-white",
-                  tableSuitColorClass(suit),
-                ].join(" ")}
-              >
-                <span className="text-2xl">{suitSymbol(suit)}</span>
-                <span className="text-xs">{suitLabel(suit)}</span>
-              </button>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => setPath(null)}
-            className={`text-xs underline ${SECONDARY_TEXT_CLASS}`}
-          >
-            ← назад
-          </button>
-        </div>
-      )}
-
-      {path === "count" && (
-        <div className="space-y-2">
-          <p className={`text-sm ${SECONDARY_TEXT_CLASS}`}>
-            Сколько карт ранга {rank} у соперника? (от 1 до {maxPossible})
-          </p>
-          <div className="flex gap-2">
-            {Array.from({ length: maxPossible }, (_, i) => i + 1).map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => sendCount(n)}
-                className="flex-1 rounded-lg border border-amber-100/20 bg-amber-50 p-3 text-xl font-semibold text-stone-950 transition hover:border-amber-200 hover:bg-white"
-              >
-                {n}
-              </button>
-            ))}
-          </div>
-          <button
-            type="button"
-            onClick={() => setPath(null)}
-            className={`text-xs underline ${SECONDARY_TEXT_CLASS}`}
-          >
-            ← назад
-          </button>
-        </div>
-      )}
+      </div>
     </div>
   );
 }

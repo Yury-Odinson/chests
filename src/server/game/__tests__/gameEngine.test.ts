@@ -15,7 +15,6 @@ import { finishGame } from "../finishGame";
 import { getStateForPlayer } from "../getStateForPlayer";
 import { guessAllSuits } from "../guessAllSuits";
 import { guessCount } from "../guessCount";
-import { guessSuit } from "../guessSuit";
 import { joinRoom } from "../joinRoom";
 import { kickPlayer } from "../kickPlayer";
 import { shuffleDeck } from "../shuffleDeck";
@@ -336,45 +335,15 @@ describe("askRank", () => {
   });
 });
 
-describe("guessSuit", () => {
-  function setupHit(): GameRoom {
-    return makeRoom({
-      players: [
-        makePlayer({ id: "p1", name: "A", hand: [card("7", "hearts")] }),
-        makePlayer({
-          id: "p2",
-          name: "B",
-          hand: [card("7", "spades"), card("K", "hearts")],
-        }),
-      ],
-      pendingGuess: {
-        stage: "awaiting-detail",
-        askerId: "p1",
-        targetId: "p2",
-        rank: "7",
-      },
-    });
-  }
-
-  it("HIT: takes card and turn continues", () => {
-    const room = setupHit();
-    const ok = assertOk(guessSuit(room, { askerId: "p1", suit: "spades" }));
-    expect(ok.room.currentPlayerId).toBe("p1");
-    expect(ok.room.pendingGuess).toBeNull();
-    const p1 = ok.room.players.find((p) => p.id === "p1")!;
-    const p2 = ok.room.players.find((p) => p.id === "p2")!;
-    expect(p1.hand.some((c) => c.id === "7_of_spades")).toBe(true);
-    expect(p2.hand.some((c) => c.id === "7_of_spades")).toBe(false);
-  });
-
-  it("MISS: reveals absent suit, draws, passes turn", () => {
+describe("guessCount: count must always be exact", () => {
+  it("count too low (said 1, target has 2) → miss, draw, pass turn", () => {
     const room = makeRoom({
       players: [
         makePlayer({ id: "p1", name: "A", hand: [card("7", "hearts")] }),
         makePlayer({
           id: "p2",
           name: "B",
-          hand: [card("7", "spades"), card("K", "hearts")],
+          hand: [card("7", "spades"), card("7", "clubs")],
         }),
       ],
       pendingGuess: {
@@ -385,25 +354,20 @@ describe("guessSuit", () => {
       },
       deck: [card("A", "clubs")],
     });
-    const ok = assertOk(guessSuit(room, { askerId: "p1", suit: "diamonds" }));
+    const ok = assertOk(guessCount(room, { askerId: "p1", count: 1 }));
     expect(ok.room.currentPlayerId).toBe("p2");
     expect(ok.room.pendingGuess).toBeNull();
     const p1 = ok.room.players.find((p) => p.id === "p1")!;
     expect(p1.hand.some((c) => c.id === "A_of_clubs")).toBe(true);
+    // No cards changed hands on a wrong count.
+    const p2 = ok.room.players.find((p) => p.id === "p2")!;
+    expect(p2.hand.filter((c) => c.rank === "7")).toHaveLength(2);
   });
 
-  it("HIT that completes a chest: 4 cards auto-collected", () => {
+  it("correct count of 1 → advances to awaiting-suits (no auto-take)", () => {
     const room = makeRoom({
       players: [
-        makePlayer({
-          id: "p1",
-          name: "A",
-          hand: [
-            card("7", "hearts"),
-            card("7", "diamonds"),
-            card("7", "clubs"),
-          ],
-        }),
+        makePlayer({ id: "p1", name: "A", hand: [card("7", "hearts")] }),
         makePlayer({ id: "p2", name: "B", hand: [card("7", "spades")] }),
       ],
       pendingGuess: {
@@ -413,12 +377,18 @@ describe("guessSuit", () => {
         rank: "7",
       },
     });
-    const ok = assertOk(guessSuit(room, { askerId: "p1", suit: "spades" }));
-    const p1 = ok.room.players.find((p) => p.id === "p1")!;
-    expect(p1.chests).toContain("7");
-    expect(p1.hand.filter((c) => c.rank === "7")).toHaveLength(0);
+    const ok = assertOk(guessCount(room, { askerId: "p1", count: 1 }));
+    expect(ok.room.pendingGuess).toEqual({
+      stage: "awaiting-suits",
+      askerId: "p1",
+      targetId: "p2",
+      rank: "7",
+      count: 1,
+    });
   });
+});
 
+describe("guessAllSuits take edge cases (keepTurn)", () => {
   it("take that empties hand with empty deck → turn passes to a player who can act", () => {
     const room = makeRoom({
       players: [
@@ -435,15 +405,17 @@ describe("guessSuit", () => {
         }),
       ],
       pendingGuess: {
-        stage: "awaiting-detail",
+        stage: "awaiting-suits",
         askerId: "p1",
         targetId: "p2",
         rank: "7",
+        count: 1,
       },
       deck: [],
     });
-    const ok = assertOk(guessSuit(room, { askerId: "p1", suit: "spades" }));
+    const ok = assertOk(guessAllSuits(room, { askerId: "p1", suits: ["spades"] }));
     const p1 = ok.room.players.find((p) => p.id === "p1")!;
+    expect(p1.chests).toContain("7");
     expect(p1.hand).toHaveLength(0);
     expect(ok.room.currentPlayerId).toBe("p2");
     expect(ok.room.pendingGuess).toBeNull();
@@ -460,14 +432,15 @@ describe("guessSuit", () => {
         makePlayer({ id: "p2", name: "B", hand: [card("7", "spades")] }),
       ],
       pendingGuess: {
-        stage: "awaiting-detail",
+        stage: "awaiting-suits",
         askerId: "p1",
         targetId: "p2",
         rank: "7",
+        count: 1,
       },
       deck: [],
     });
-    const ok = assertOk(guessSuit(room, { askerId: "p1", suit: "spades" }));
+    const ok = assertOk(guessAllSuits(room, { askerId: "p1", suits: ["spades"] }));
     // Both hands empty + empty deck → nobody can move. Host ends via «Завершить».
     expect(ok.room.currentPlayerId).toBeNull();
   });
@@ -483,14 +456,15 @@ describe("guessSuit", () => {
         makePlayer({ id: "p2", name: "B", hand: [card("7", "spades")] }),
       ],
       pendingGuess: {
-        stage: "awaiting-detail",
+        stage: "awaiting-suits",
         askerId: "p1",
         targetId: "p2",
         rank: "7",
+        count: 1,
       },
       deck: [card("K", "hearts")],
     });
-    const ok = assertOk(guessSuit(room, { askerId: "p1", suit: "spades" }));
+    const ok = assertOk(guessAllSuits(room, { askerId: "p1", suits: ["spades"] }));
     const p1 = ok.room.players.find((p) => p.id === "p1")!;
     expect(p1.chests).toContain("7");
     expect(p1.hand.some((c) => c.id === "K_of_hearts")).toBe(true);
@@ -767,13 +741,14 @@ describe("full game ends when all chests collected", () => {
         }),
       ],
       pendingGuess: {
-        stage: "awaiting-detail",
+        stage: "awaiting-suits",
         askerId: "p1",
         targetId: "p2",
         rank: "A",
+        count: 1,
       },
     });
-    const ok = assertOk(guessSuit(room, { askerId: "p1", suit: "spades" }));
+    const ok = assertOk(guessAllSuits(room, { askerId: "p1", suits: ["spades"] }));
     expect(ok.room.status).toBe("finished");
     expect(ok.room.winnerIds).toEqual(["p1"]);
   });

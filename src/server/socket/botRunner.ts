@@ -2,7 +2,6 @@ import { askRank } from "@/server/game/askRank";
 import { decideBotAction } from "@/server/game/botBrain";
 import { guessAllSuits } from "@/server/game/guessAllSuits";
 import { guessCount } from "@/server/game/guessCount";
-import { guessSuit } from "@/server/game/guessSuit";
 import { passTurn } from "@/server/game/finalize";
 import { findPlayer } from "@/server/game/helpers";
 import { roomsStore } from "@/server/rooms/roomsStore";
@@ -103,8 +102,6 @@ function dispatch(
         targetId: action!.targetId,
         rank: action!.rank,
       });
-    case "guess-suit":
-      return guessSuit(room, { askerId: botId, suit: action!.suit });
     case "guess-count":
       return guessCount(room, { askerId: botId, count: action!.count });
     case "guess-suits":

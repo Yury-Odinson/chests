@@ -3,7 +3,6 @@ import type {
   ClientToServerEvents,
   GameAskRankPayload,
   GameGuessCountPayload,
-  GameGuessSuitPayload,
   GameGuessSuitsPayload,
   RoomAddBotPayload,
   RoomCreatePayload,
@@ -24,7 +23,6 @@ import { passTurn } from "@/server/game/finalize";
 import { finishGame } from "@/server/game/finishGame";
 import { guessAllSuits } from "@/server/game/guessAllSuits";
 import { guessCount } from "@/server/game/guessCount";
-import { guessSuit } from "@/server/game/guessSuit";
 import { joinRoom } from "@/server/game/joinRoom";
 import { kickPlayer } from "@/server/game/kickPlayer";
 import { leaveRoom } from "@/server/game/leaveRoom";
@@ -237,15 +235,6 @@ export function registerHandlers(io: GameIO, socket: GameSocket): void {
         rank: payload.rank,
       })
     );
-  });
-
-  socket.on("game:guess-suit", (payload: GameGuessSuitPayload) => {
-    const room = roomsStore.get(payload.roomId);
-    if (!room) return emitError(socket, "Комната не найдена");
-    const askerId = socket.data.playerId;
-    if (!askerId) return emitError(socket, "Вы не в комнате");
-
-    applyResult(io, socket, guessSuit(room, { askerId, suit: payload.suit }));
   });
 
   socket.on("game:guess-count", (payload: GameGuessCountPayload) => {

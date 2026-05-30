@@ -38,10 +38,6 @@ export interface GameAskRankPayload {
   targetPlayerId: string;
   rank: Rank;
 }
-export interface GameGuessSuitPayload {
-  roomId: string;
-  suit: Suit;
-}
 export interface GameGuessCountPayload {
   roomId: string;
   count: number;
@@ -79,7 +75,6 @@ export interface ClientToServerEvents {
   "room:add-bot": (payload: RoomAddBotPayload) => void;
   "room:kick": (payload: RoomKickPayload) => void;
   "game:ask-rank": (payload: GameAskRankPayload) => void;
-  "game:guess-suit": (payload: GameGuessSuitPayload) => void;
   "game:guess-count": (payload: GameGuessCountPayload) => void;
   "game:guess-suits": (payload: GameGuessSuitsPayload) => void;
 }

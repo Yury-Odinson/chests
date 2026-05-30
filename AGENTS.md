@@ -45,19 +45,14 @@ On their turn the active player:
 3. Server checks whether the target has any card of that rank.
    - **Target has none** → active player draws 1 card from the deck (if non-empty), turn passes to next active player.
    - **Target has at least one** → continue to step 4.
-4. Active player chooses one of two paths: **suit** or **count**.
+4. Active player must **name how many cards of that rank the target holds (1–4).**
+   - Count wrong → real count is publicly revealed; active draws 1 card; turn passes.
+   - Count correct → active must also name **all suits** of those cards.
+     - All suits correct → active takes all those cards; turn **continues**.
+     - Any suit wrong → the incorrectly-named suits are publicly revealed; active draws 1 card; turn passes.
 
-**Path «suit»:**
-- Names a suit.
-- Target has rank+suit → active takes that one card; turn **continues**.
-- Target does not have that suit → it is publicly revealed that the suit is absent; active draws 1 card; turn passes.
-
-**Path «count»:**
-- Names how many cards of that rank the target holds (1–4).
-- Count wrong → real count is publicly revealed; active draws 1 card; turn passes.
-- Count correct → active must also name **all suits** of those cards.
-  - All suits correct → active takes all those cards; turn **continues**.
-  - Any suit wrong → the incorrectly-named suits are publicly revealed; active draws 1 card; turn passes.
+There is no shortcut for taking a single card: you always have to guess the
+exact count first, then the suits.
 
 ### Chests
 
@@ -131,9 +126,8 @@ src/
       createRoom.ts
       startGame.ts
       askRank.ts             # step 3: does target have rank?
-      guessSuit.ts           # path «suit»
-      guessCount.ts          # path «count» step 1
-      guessAllSuits.ts       # path «count» step 2
+      guessCount.ts          # step 4a: name the count
+      guessAllSuits.ts       # step 4b: name all suits after correct count
       drawCard.ts
       collectChests.ts
       getNextPlayerId.ts
@@ -159,7 +153,6 @@ Client → server:
 - `room:start` `{ roomId }`
 - `room:finish` `{ roomId }` (host only)
 - `game:ask-rank` `{ roomId, targetPlayerId, rank }`
-- `game:guess-suit` `{ roomId, suit }`
 - `game:guess-count` `{ roomId, count }`
 - `game:guess-suits` `{ roomId, suits: Suit[] }` — names all suits after correct count
 

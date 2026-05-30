@@ -10,7 +10,6 @@ import type { Rng } from "./types";
  */
 export type BotAction =
   | { type: "ask-rank"; targetId: string; rank: Rank }
-  | { type: "guess-suit"; suit: Suit }
   | { type: "guess-count"; count: number }
   | { type: "guess-suits"; suits: Suit[] };
 
@@ -129,34 +128,24 @@ function decideDetail(
   const k = getKnowledge(room.botMemory, botId, targetId, rank);
   const cap = maxTargetCount(bot, rank);
 
-  // Suits the bot itself holds can't be taken from the target; suits already
-  // revealed absent are dead. What's left are the suits worth guessing.
-  const ownSuits = new Set(cardsOfRank(bot, rank).map((c) => c.suit));
-  const liveSuits = SUITS.filter(
-    (s) => !ownSuits.has(s) && !k.absentSuits.includes(s)
-  );
-
-  // "Smart" style: go for COUNT when we can name it with confidence — either
-  // the count was revealed, or only one count is still possible.
+  // The only path is COUNT. If a previous miss revealed the real count and we
+  // haven't named it yet, name it now (this is how the bot chases the same
+  // target with a corrected guess). Otherwise pick an untried count.
   const known = k.revealedCount;
   const certain =
-    known !== null && known >= 1 && !k.triedCounts.includes(known);
+    known !== null && known >= 1 && known <= cap && !k.triedCounts.includes(known);
 
-  if (certain || cap === 1) {
-    const count = certain ? (known as number) : 1;
+  if (certain) {
     if (blunders(rng)) {
-      const wrong = wrongCount(count, cap, k.triedCounts, rng);
+      const wrong = wrongCount(known as number, cap, k.triedCounts, rng);
       if (wrong !== null) return { type: "guess-count", count: wrong };
     }
-    return { type: "guess-count", count };
+    return { type: "guess-count", count: known as number };
   }
 
-  // No certainty → cautious single-suit guess (low risk of a miss).
-  if (liveSuits.length > 0 && !blunders(rng)) {
-    return { type: "guess-suit", suit: pick(liveSuits, rng) };
-  }
-
-  // Blundering, or no live suit deduced: guess a count we haven't tried yet.
+  // No certainty: guess a count we haven't tried yet (avoids repeating a known
+  // wrong answer — requirement #1). The blunder chance is implicit: with no
+  // info, any untried guess can be wrong, just like a human guessing.
   const untried = countOptions(cap).filter((c) => !k.triedCounts.includes(c));
   const pool = untried.length > 0 ? untried : countOptions(cap);
   return { type: "guess-count", count: pick(pool, rng) };

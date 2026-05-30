@@ -4,7 +4,9 @@ import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useGameSocket } from "@/features/game/SocketProvider";
 import { AskFlow } from "@/features/game/components/AskFlow";
+import { CardFlightLayer } from "@/features/game/components/CardFlightLayer";
 import { ChestsList } from "@/features/game/components/ChestsList";
+import { DeckPile } from "@/features/game/components/DeckPile";
 import { GameLog } from "@/features/game/components/GameLog";
 import { MyHand } from "@/features/game/components/MyHand";
 import { WinnerOverlay } from "@/features/game/components/WinnerOverlay";
@@ -343,12 +345,9 @@ function PlayArea({
         <div className="pointer-events-none absolute inset-0 z-20 bg-black/48" />
       )}
 
+      <CardFlightLayer state={state} />
+
       <div className="absolute left-4 top-20 z-30 flex items-center gap-2 rounded-xl border border-amber-200/20 bg-zinc-950/62 px-3 py-2 text-sm text-amber-50 shadow-lg backdrop-blur-[2px]">
-        <span>
-          <span className="text-amber-100/60">колода:</span>{" "}
-          <span className="font-semibold">{state.deckCount}</span>
-        </span>
-        <span className="h-5 w-px bg-amber-100/20" />
         <span>
           <span className="text-amber-100/60">сундуки:</span>{" "}
           <span className="font-semibold">
@@ -360,6 +359,8 @@ function PlayArea({
       <div className="absolute right-0 top-0 z-40 h-full w-[360px]">
         <GameLog items={state.log} variant="table" />
       </div>
+
+      <DeckPile count={state.deckCount} />
 
       <MascotHint />
 
@@ -514,14 +515,19 @@ function TableSeat({
 
   if (isSelectable) {
     return (
-      <button type="button" onClick={onSelect} className={className}>
+      <button
+        type="button"
+        onClick={onSelect}
+        className={className}
+        data-anchor={`seat-${player.id}`}
+      >
         {content}
       </button>
     );
   }
 
   return (
-    <article className={className}>
+    <article className={className} data-anchor={`seat-${player.id}`}>
       {content}
     </article>
   );
@@ -533,9 +539,12 @@ function MiniCardFan({ count }: { count: number }) {
   return (
     <div className="mt-2 flex h-8 items-end">
       {visibleCards.map((_, index) => (
-        <span
+        <img
           key={index}
-          className="h-7 w-5 rounded-[4px] border border-emerald-950/70 bg-gradient-to-br from-emerald-700 to-emerald-950 shadow-sm"
+          src="/card-back.png"
+          alt=""
+          draggable={false}
+          className="h-7 w-5 rounded-[4px] object-cover shadow-sm"
           style={{
             marginLeft: index === 0 ? 0 : -8,
             transform: `rotate(${(index - visibleCards.length / 2) * 4}deg)`,
@@ -556,6 +565,7 @@ function MySeat({ state }: { state: ClientGameState }) {
 
   return (
     <section
+      data-anchor={`seat-${state.me.id}`}
       className={[
         "game-my-seat absolute bottom-4 z-10 w-[700px] -translate-x-1/2 rounded-2xl border bg-[#160f0b]/82 p-2.5 text-amber-50 shadow-[0_24px_80px_rgba(0,0,0,0.52)] backdrop-blur-[3px]",
         isCurrent

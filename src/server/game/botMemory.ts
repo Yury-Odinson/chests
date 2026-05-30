@@ -102,20 +102,6 @@ export function observeRankAsk(
   );
 }
 
-/** A suit guess missed: that suit of the rank is absent from the target. */
-export function observeSuitAbsent(
-  room: GameRoom,
-  targetId: string,
-  rank: Rank,
-  suit: Suit
-): BotMemory {
-  return updateAllBots(room, targetId, rank, (k) => ({
-    ...k,
-    knownPresent: true,
-    absentSuits: unique([...k.absentSuits, suit]),
-  }));
-}
-
 /** A count guess was wrong; remember it and the now-revealed real count. */
 export function observeCountWrong(
   room: GameRoom,

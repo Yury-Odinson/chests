@@ -11,8 +11,8 @@ import { askRank } from "../askRank";
 import { decideBotAction } from "../botBrain";
 import { getKnowledge } from "../botMemory";
 import { createRoom } from "../createRoom";
+import { guessAllSuits } from "../guessAllSuits";
 import { guessCount } from "../guessCount";
-import { guessSuit } from "../guessSuit";
 
 function card(rank: Rank, suit: Suit): Card {
   return { id: `${rank}_of_${suit}`, rank, suit };
@@ -167,16 +167,12 @@ describe("bot brain: stage 2 (detail)", () => {
     });
   }
 
-  it("guesses a single suit when count is uncertain", () => {
+  it("always guesses a count (suit path no longer exists)", () => {
     const action = decideBotAction(pending(), "bot", steadyRng);
-    expect(action?.type).toBe("guess-suit");
-    if (action?.type === "guess-suit") {
-      // Never names a suit the bot itself holds (hearts).
-      expect(action.suit).not.toBe("hearts");
-    }
+    expect(action?.type).toBe("guess-count");
   });
 
-  it("goes for count when the exact count was revealed", () => {
+  it("names the revealed count when known and untried", () => {
     const room = pending({
       botMemory: {
         bot: { p2: { "7": { knownPresent: true, knownAbsent: false, absentSuits: [], triedCounts: [], revealedCount: 2 } } },
@@ -186,16 +182,17 @@ describe("bot brain: stage 2 (detail)", () => {
     expect(action).toEqual({ type: "guess-count", count: 2 });
   });
 
-  it("does not name a suit already revealed absent", () => {
+  it("does not repeat a count it already tried (requirement #1)", () => {
+    // Bot holds one 7 (cap = 3); already tried count 1. Should pick from {2,3}.
     const room = pending({
       botMemory: {
-        bot: { p2: { "7": { knownPresent: true, knownAbsent: false, absentSuits: ["spades"], triedCounts: [], revealedCount: null } } },
+        bot: { p2: { "7": { knownPresent: true, knownAbsent: false, absentSuits: [], triedCounts: [1], revealedCount: null } } },
       },
     });
     const action = decideBotAction(room, "bot", steadyRng);
-    if (action?.type === "guess-suit") {
-      expect(action.suit).not.toBe("spades");
-      expect(action.suit).not.toBe("hearts");
+    expect(action?.type).toBe("guess-count");
+    if (action?.type === "guess-count") {
+      expect(action.count).not.toBe(1);
     }
   });
 });
@@ -241,15 +238,19 @@ describe("bot memory: observation from real engine flow", () => {
     expect(k.revealedCount).toBe(2);
   });
 
-  it("a watching bot learns an absent suit from another player's miss", () => {
-    // p2 is the asker (human); bot just watches. The bot should still learn
-    // that p3 lacks 7 of diamonds.
+  it("a watching bot learns the real count from another player's wrong count", () => {
+    // p2 is the asker (human) and guesses the count wrong; the bot just
+    // watches but should still learn p3's revealed count of 7s.
     const room = makeRoom({
       currentPlayerId: "p2",
       players: [
         makePlayer({ id: "bot", name: "Bot", isBot: true, hand: [card("7", "hearts")] }),
-        makePlayer({ id: "p2", name: "Bob", hand: [card("7", "clubs")] }),
-        makePlayer({ id: "p3", name: "Cara", hand: [card("7", "spades")] }),
+        makePlayer({ id: "p2", name: "Bob", hand: [card("K", "clubs")] }),
+        makePlayer({
+          id: "p3",
+          name: "Cara",
+          hand: [card("7", "spades"), card("7", "diamonds")],
+        }),
       ],
       pendingGuess: {
         stage: "awaiting-detail",
@@ -259,9 +260,10 @@ describe("bot memory: observation from real engine flow", () => {
       },
       deck: [card("A", "clubs")],
     });
-    const ok = assertOk(guessSuit(room, { askerId: "p2", suit: "diamonds" }));
+    const ok = assertOk(guessCount(room, { askerId: "p2", count: 1 }));
     const k = getKnowledge(ok.room.botMemory, "bot", "p3", "7");
-    expect(k.absentSuits).toContain("diamonds");
+    expect(k.revealedCount).toBe(2);
+    expect(k.triedCounts).toContain(1);
   });
 
   it("forgets a rank for a target after its cards are taken", () => {
@@ -275,16 +277,17 @@ describe("bot memory: observation from real engine flow", () => {
         }),
       ],
       pendingGuess: {
-        stage: "awaiting-detail",
+        stage: "awaiting-suits",
         askerId: "bot",
         targetId: "p2",
         rank: "7",
+        count: 1,
       },
       botMemory: {
         bot: { p2: { "7": { knownPresent: true, knownAbsent: false, absentSuits: ["clubs"], triedCounts: [3], revealedCount: 1 } } },
       },
     });
-    const ok = assertOk(guessSuit(room, { askerId: "bot", suit: "spades" }));
+    const ok = assertOk(guessAllSuits(room, { askerId: "bot", suits: ["spades"] }));
     const k = getKnowledge(ok.room.botMemory, "bot", "p2", "7");
     expect(k.knownPresent).toBe(false);
     expect(k.revealedCount).toBeNull();
