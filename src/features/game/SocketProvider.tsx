@@ -75,6 +75,8 @@ interface SocketContextValue {
   recentLogs: GameLogItem[];
   session: SessionInfo | null;
   setSession: (info: SessionInfo | null) => void;
+  kicked: boolean;
+  clearKicked: () => void;
   clearError: () => void;
   name: string;
   setName: (name: string) => void;
@@ -93,6 +95,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [recentLogs, setRecentLogs] = useState<GameLogItem[]>([]);
   const [session, setSessionState] = useState<SessionInfo | null>(null);
+  const [kicked, setKicked] = useState(false);
   const [name, setNameState] = useState("");
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [hydrated, setHydrated] = useState(false);
@@ -166,6 +169,13 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       setSession(null);
       setState(null);
     });
+    s.on("room:kicked", () => {
+      // Host removed us from the lobby — drop the session and clear state so
+      // the game page bounces back to the lobby.
+      setSession(null);
+      setState(null);
+      setKicked(true);
+    });
 
     return () => {
       s.disconnect();
@@ -174,6 +184,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   }, [setSession]);
 
   const clearError = useCallback(() => setError(null), []);
+  const clearKicked = useCallback(() => setKicked(false), []);
 
   const value = useMemo<SocketContextValue>(
     () => ({
@@ -184,6 +195,8 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       recentLogs,
       session,
       setSession,
+      kicked,
+      clearKicked,
       clearError,
       name,
       setName,
@@ -199,6 +212,8 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       recentLogs,
       session,
       setSession,
+      kicked,
+      clearKicked,
       clearError,
       name,
       setName,

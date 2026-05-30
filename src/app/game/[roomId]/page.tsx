@@ -24,8 +24,18 @@ export default function GamePage({
     error,
     session,
     setSession,
+    kicked,
+    clearKicked,
     clearError,
   } = useGameSocket();
+
+  // Host kicked us out of the lobby → bounce back to the lobby list.
+  useEffect(() => {
+    if (kicked) {
+      clearKicked();
+      router.push("/lobby");
+    }
+  }, [kicked, clearKicked, router]);
 
   const matches = state?.roomId === roomId;
   const haveSession = session?.roomId === roomId;
@@ -209,14 +219,13 @@ function LobbyScene({
 }) {
   return (
     <section
-      className="game-scene-bg absolute inset-0 overflow-hidden bg-stone-950 bg-cover"
+      className="relative flex h-full w-full items-center justify-center overflow-hidden bg-stone-950 bg-cover bg-center px-6 py-10"
       style={{
         backgroundImage:
-          "linear-gradient(180deg, rgba(9, 6, 5, 0.1) 0%, rgba(9, 6, 5, 0.22) 58%, rgba(9, 6, 5, 0.7) 100%), url('/game-bg.png')",
+          "linear-gradient(90deg, rgba(8, 6, 5, 0.78) 0%, rgba(8, 6, 5, 0.44) 42%, rgba(8, 6, 5, 0.2) 72%), linear-gradient(180deg, rgba(8, 6, 5, 0.1) 0%, rgba(8, 6, 5, 0.56) 100%), url('/welcome-bg.png')",
       }}
     >
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_56%_54%,rgba(255,190,96,0.08),rgba(0,0,0,0)_34%),linear-gradient(90deg,rgba(0,0,0,0.3),rgba(0,0,0,0)_25%,rgba(0,0,0,0)_75%,rgba(0,0,0,0.28))]" />
-      <div className="absolute left-1/2 top-1/2 z-10 w-[520px] -translate-x-1/2 -translate-y-1/2">
+      <div className="relative z-10 w-full max-w-md">
         <Lobby state={state} socket={socket} />
       </div>
     </section>
@@ -234,16 +243,21 @@ function Lobby({
   const canAddBot = isHost && state.players.length < 5;
 
   return (
-    <section className="rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] p-4">
-      <h2 className="text-lg font-semibold">Игроки ({state.players.length}/5)</h2>
-      <p className="text-xs opacity-60">
-        Минимум 2 игрока. Хост запускает партию.
-      </p>
-      <ul className="mt-3 space-y-2">
+    <section className="rounded-2xl border border-amber-100/20 bg-[#160f0b]/88 p-6 text-amber-50 shadow-[0_24px_80px_rgba(0,0,0,0.56)]">
+      <header className="space-y-1 text-center">
+        <h2 className="text-2xl font-bold tracking-tight">
+          Игроки ({state.players.length}/5)
+        </h2>
+        <p className="text-sm text-amber-50/70">
+          Минимум 2 игрока. Хост запускает партию.
+        </p>
+      </header>
+
+      <ul className="mt-6 space-y-2">
         {state.players.map((p) => (
           <li
             key={p.id}
-            className="flex items-center justify-between rounded-lg border border-[var(--card-border)] px-3 py-2"
+            className="flex items-center justify-between rounded-lg border border-amber-100/20 bg-stone-950/26 px-3 py-2"
           >
             <span className="flex items-center gap-2">
               <span
@@ -256,20 +270,36 @@ function Lobby({
                 </span>
               )}
               {p.id === state.hostId && (
-                <span className="text-xs opacity-60">(хост)</span>
+                <span className="text-xs text-amber-50/55">(хост)</span>
               )}
               {p.id === state.me.id && (
-                <span className="text-xs text-[var(--accent)]">— это вы</span>
+                <span className="text-xs text-amber-300">— это вы</span>
               )}
             </span>
+            {isHost && p.id !== state.me.id && (
+              <button
+                type="button"
+                title="Кикнуть из комнаты"
+                onClick={() =>
+                  socket.emit("room:kick", {
+                    roomId: state.roomId,
+                    targetPlayerId: p.id,
+                  })
+                }
+                className="rounded-md border border-red-300/40 px-2 py-0.5 text-xs text-red-200 transition hover:border-red-200 hover:bg-red-950/40"
+              >
+                кикнуть
+              </button>
+            )}
           </li>
         ))}
       </ul>
+
       {canAddBot && (
         <button
           type="button"
           onClick={() => socket.emit("room:add-bot", { roomId: state.roomId })}
-          className="mt-3 w-full rounded-lg border border-amber-200/40 px-3 py-2 text-sm font-medium text-amber-100 transition hover:border-amber-200 hover:bg-amber-950/30"
+          className="mt-6 w-full rounded-lg bg-amber-300 px-4 py-3 font-medium text-stone-950 transition hover:bg-amber-200"
         >
           + Добавить бота
         </button>

@@ -29,6 +29,10 @@ export interface RoomFinishPayload {
 export interface RoomAddBotPayload {
   roomId: string;
 }
+export interface RoomKickPayload {
+  roomId: string;
+  targetPlayerId: string;
+}
 export interface GameAskRankPayload {
   roomId: string;
   targetPlayerId: string;
@@ -73,6 +77,7 @@ export interface ClientToServerEvents {
   "room:start": (payload: RoomStartPayload) => void;
   "room:finish": (payload: RoomFinishPayload) => void;
   "room:add-bot": (payload: RoomAddBotPayload) => void;
+  "room:kick": (payload: RoomKickPayload) => void;
   "game:ask-rank": (payload: GameAskRankPayload) => void;
   "game:guess-suit": (payload: GameGuessSuitPayload) => void;
   "game:guess-count": (payload: GameGuessCountPayload) => void;
@@ -84,6 +89,7 @@ export interface ServerToClientEvents {
   "room:created": (payload: RoomCreatedPayload) => void;
   "room:joined": (payload: RoomJoinedPayload) => void;
   "session:invalid": () => void;
+  "room:kicked": () => void;
   "game:state": (state: ClientGameState) => void;
   "game:log": (item: GameLogItem) => void;
   "game:error": (payload: GameErrorPayload) => void;

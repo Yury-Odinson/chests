@@ -9,6 +9,7 @@ import type {
   RoomCreatePayload,
   RoomFinishPayload,
   RoomJoinPayload,
+  RoomKickPayload,
   RoomLeavePayload,
   RoomRejoinPayload,
   RoomStartPayload,
@@ -25,6 +26,7 @@ import { guessAllSuits } from "@/server/game/guessAllSuits";
 import { guessCount } from "@/server/game/guessCount";
 import { guessSuit } from "@/server/game/guessSuit";
 import { joinRoom } from "@/server/game/joinRoom";
+import { kickPlayer } from "@/server/game/kickPlayer";
 import { leaveRoom } from "@/server/game/leaveRoom";
 import { rejoinRoom } from "@/server/game/rejoinRoom";
 import { startGame } from "@/server/game/startGame";
@@ -180,6 +182,41 @@ export function registerHandlers(io: GameIO, socket: GameSocket): void {
     if (!result.ok) return emitError(socket, result.error);
 
     roomsStore.set(result.room);
+    broadcastLogs(io, result.room, result.logs);
+    broadcastState(io, result.room);
+    broadcastLobby(io);
+  });
+
+  socket.on("room:kick", (payload: RoomKickPayload) => {
+    const room = roomsStore.get(payload.roomId);
+    if (!room) return emitError(socket, "Комната не найдена");
+    const hostId = socket.data.playerId;
+    if (!hostId) return emitError(socket, "Вы не в комнате");
+
+    // Capture the target's socket before removal so we can boot their session.
+    const targetSocketId = room.players.find(
+      (p) => p.id === payload.targetPlayerId
+    )?.socketId;
+
+    const result = kickPlayer(room, {
+      hostId,
+      targetId: payload.targetPlayerId,
+    });
+    if (!result.ok) return emitError(socket, result.error);
+
+    roomsStore.set(result.room);
+
+    // Tell the kicked human (if any) to drop their session and leave the room.
+    if (targetSocketId) {
+      io.to(targetSocketId).emit("room:kicked");
+      const targetSocket = io.sockets.sockets.get(targetSocketId);
+      if (targetSocket) {
+        targetSocket.leave(room.id);
+        targetSocket.data.playerId = undefined;
+        targetSocket.data.roomId = undefined;
+      }
+    }
+
     broadcastLogs(io, result.room, result.logs);
     broadcastState(io, result.room);
     broadcastLobby(io);

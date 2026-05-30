@@ -33,6 +33,31 @@ export function passTurn(
   return { room: next, logs };
 }
 
+/**
+ * After a successful take the turn normally stays with the asker. But if the
+ * take (e.g. completing a chest) left them with no cards, the rules' "start of
+ * turn" handling applies: auto-draw 1 if the deck has cards, otherwise the
+ * player can't act — pass the turn on. `pendingGuess` is always cleared.
+ */
+export function keepTurn(
+  room: GameRoom,
+  askerId: string
+): { room: GameRoom; logs: GameLogItem[] } {
+  const cleared: GameRoom = { ...room, pendingGuess: null };
+  const asker = cleared.players.find((p) => p.id === askerId);
+
+  if (asker && asker.hand.length > 0) {
+    return { room: cleared, logs: [] };
+  }
+
+  if (cleared.deck.length > 0) {
+    return drawCard(cleared, askerId);
+  }
+
+  // Empty hand and empty deck → asker can't continue; pass to the next player.
+  return passTurn(cleared, askerId);
+}
+
 export function maybeFinish(
   room: GameRoom,
   logs: GameLogItem[]

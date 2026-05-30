@@ -38,10 +38,10 @@ export default function HomePage() {
       }}
     >
       <section className="relative z-10 w-full max-w-md rounded-2xl border border-amber-100/20 bg-[#160f0b]/88 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.56)]">
-        <header className="space-y-2">
+        <header className="space-y-2 text-center">
           <h1 className="text-4xl font-bold tracking-tight">Сундук</h1>
           <p className="text-sm text-amber-50/70">
-            Карточная игра «Сундук / Клад» для 2–5 игроков.
+            Карточная игра для 2–5 игроков.
           </p>
         </header>
 

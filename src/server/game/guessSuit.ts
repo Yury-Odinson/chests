@@ -2,7 +2,7 @@ import type { GameRoom, Suit } from "@/shared/types/game";
 import { forgetRankForTarget, observeSuitAbsent } from "./botMemory";
 import { collectChests } from "./collectChests";
 import { drawCard } from "./drawCard";
-import { maybeFinish, passTurn } from "./finalize";
+import { keepTurn, maybeFinish, passTurn } from "./finalize";
 import {
   err,
   findPlayer,
@@ -48,8 +48,12 @@ export function guessSuit(
       "success"
     );
     const chest = collectChests(next, args.askerId);
-    const cleared: GameRoom = { ...chest.room, pendingGuess: null };
-    const final = maybeFinish(cleared, [askLog, ...chest.logs]);
+    const cont = keepTurn(chest.room, args.askerId);
+    const final = maybeFinish(cont.room, [
+      askLog,
+      ...chest.logs,
+      ...cont.logs,
+    ]);
     return ok(final.room, final.logs);
   }
 
