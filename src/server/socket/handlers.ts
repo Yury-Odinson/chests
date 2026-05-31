@@ -288,6 +288,11 @@ function handleLeave(
     return;
   }
 
+  if (!isDisconnect && room.status === "finished" && playerId === room.hostId) {
+    closeRoom(io, room.id);
+    return;
+  }
+
   if (result.destroyed) {
     roomsStore.delete(room.id);
     broadcastLobby(io);
@@ -330,4 +335,21 @@ function handleLeave(
     socket.data.playerId = undefined;
     socket.data.roomId = undefined;
   }
+}
+
+function closeRoom(io: GameIO, roomId: string): void {
+  const sockets = io.sockets.adapter.rooms.get(roomId);
+  if (sockets) {
+    for (const socketId of [...sockets]) {
+      const participant = io.sockets.sockets.get(socketId);
+      participant?.emit("room:closed");
+      participant?.leave(roomId);
+      if (participant) {
+        participant.data.playerId = undefined;
+        participant.data.roomId = undefined;
+      }
+    }
+  }
+  roomsStore.delete(roomId);
+  broadcastLobby(io);
 }

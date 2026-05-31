@@ -84,6 +84,7 @@ export interface ServerToClientEvents {
   "room:created": (payload: RoomCreatedPayload) => void;
   "room:joined": (payload: RoomJoinedPayload) => void;
   "session:invalid": () => void;
+  "room:closed": () => void;
   "room:kicked": () => void;
   "game:state": (state: ClientGameState) => void;
   "game:log": (item: GameLogItem) => void;

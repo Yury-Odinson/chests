@@ -26,18 +26,22 @@ export default function GamePage({
     error,
     session,
     setSession,
+    clearRoomState,
     kicked,
     clearKicked,
+    roomClosed,
+    clearRoomClosed,
     clearError,
   } = useGameSocket();
 
   // Host kicked us out of the lobby → bounce back to the lobby list.
   useEffect(() => {
-    if (kicked) {
+    if (kicked || roomClosed) {
       clearKicked();
+      clearRoomClosed();
       router.push("/lobby");
     }
-  }, [kicked, clearKicked, router]);
+  }, [kicked, roomClosed, clearKicked, clearRoomClosed, router]);
 
   const matches = state?.roomId === roomId;
   const haveSession = session?.roomId === roomId;
@@ -72,6 +76,7 @@ export default function GamePage({
         onLeave={() => {
           socket.emit("room:leave", { roomId });
           setSession(null);
+          clearRoomState();
           router.push("/lobby");
         }}
         hostId={state.hostId}
@@ -106,7 +111,9 @@ export default function GamePage({
         <WinnerOverlay
           state={state}
           onClose={() => {
+            socket.emit("room:leave", { roomId });
             setSession(null);
+            clearRoomState();
             router.push("/lobby");
           }}
         />

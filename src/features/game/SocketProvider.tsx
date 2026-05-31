@@ -75,8 +75,11 @@ interface SocketContextValue {
   recentLogs: GameLogItem[];
   session: SessionInfo | null;
   setSession: (info: SessionInfo | null) => void;
+  clearRoomState: () => void;
   kicked: boolean;
   clearKicked: () => void;
+  roomClosed: boolean;
+  clearRoomClosed: () => void;
   clearError: () => void;
   name: string;
   setName: (name: string) => void;
@@ -96,6 +99,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const [recentLogs, setRecentLogs] = useState<GameLogItem[]>([]);
   const [session, setSessionState] = useState<SessionInfo | null>(null);
   const [kicked, setKicked] = useState(false);
+  const [roomClosed, setRoomClosed] = useState(false);
   const [name, setNameState] = useState("");
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
   const [hydrated, setHydrated] = useState(false);
@@ -114,6 +118,11 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const setName = useCallback((next: string) => {
     writeName(next);
     setNameState(next);
+  }, []);
+
+  const clearRoomState = useCallback(() => {
+    setState(null);
+    setRecentLogs([]);
   }, []);
 
   const enterLobby = useCallback(() => {
@@ -167,13 +176,18 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       // Stale auto-rejoin: the room no longer exists. Forget it silently
       // instead of surfacing an error or hanging on "looking for room…".
       setSession(null);
-      setState(null);
+      clearRoomState();
+    });
+    s.on("room:closed", () => {
+      setSession(null);
+      clearRoomState();
+      setRoomClosed(true);
     });
     s.on("room:kicked", () => {
       // Host removed us from the lobby — drop the session and clear state so
       // the game page bounces back to the lobby.
       setSession(null);
-      setState(null);
+      clearRoomState();
       setKicked(true);
     });
 
@@ -181,10 +195,11 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       s.disconnect();
       socketRef.current = null;
     };
-  }, [setSession]);
+  }, [clearRoomState, setSession]);
 
   const clearError = useCallback(() => setError(null), []);
   const clearKicked = useCallback(() => setKicked(false), []);
+  const clearRoomClosed = useCallback(() => setRoomClosed(false), []);
 
   const value = useMemo<SocketContextValue>(
     () => ({
@@ -195,8 +210,11 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       recentLogs,
       session,
       setSession,
+      clearRoomState,
       kicked,
       clearKicked,
+      roomClosed,
+      clearRoomClosed,
       clearError,
       name,
       setName,
@@ -212,8 +230,11 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       recentLogs,
       session,
       setSession,
+      clearRoomState,
       kicked,
       clearKicked,
+      roomClosed,
+      clearRoomClosed,
       clearError,
       name,
       setName,

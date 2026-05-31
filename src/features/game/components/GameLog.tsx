@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import type { GameLogItem, GameLogKind } from "@/shared/types/game";
 
 const KIND_CLASS: Record<GameLogKind, string> = {
@@ -40,12 +40,21 @@ export function GameLog({
   items: GameLogItem[];
   variant?: "default" | "table";
 }) {
-  const endRef = useRef<HTMLDivElement | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   const kindClass = variant === "table" ? TABLE_KIND_CLASS : KIND_CLASS;
+  const lastItemId = items[items.length - 1]?.id;
 
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [items.length]);
+  useLayoutEffect(() => {
+    const scrollToBottom = () => {
+      const node = scrollRef.current;
+      if (!node) return;
+      node.scrollTop = node.scrollHeight;
+    };
+
+    scrollToBottom();
+    const frame = requestAnimationFrame(scrollToBottom);
+    return () => cancelAnimationFrame(frame);
+  }, [lastItemId]);
 
   return (
     <div
@@ -66,7 +75,10 @@ export function GameLog({
       >
         Лог
       </div>
-      <div className="flex-1 space-y-1 overflow-y-auto px-3 py-2 text-sm">
+      <div
+        ref={scrollRef}
+        className="flex-1 space-y-1 overflow-y-auto px-3 pb-10 pt-2 text-sm"
+      >
         {items.length === 0 && (
           <p className="opacity-50">События появятся здесь.</p>
         )}
@@ -78,7 +90,6 @@ export function GameLog({
             {renderMessage(item.message)}
           </p>
         ))}
-        <div ref={endRef} />
       </div>
     </div>
   );

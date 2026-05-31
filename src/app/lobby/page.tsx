@@ -18,6 +18,7 @@ export default function LobbyPage() {
     rooms,
     enterLobby,
     leaveLobby,
+    clearRoomClosed,
     setSession,
   } = useGameSocket();
 
@@ -40,9 +41,10 @@ export default function LobbyPage() {
 
   // Subscribe to the live room list while on this screen.
   useEffect(() => {
+    clearRoomClosed();
     enterLobby();
     return () => leaveLobby();
-  }, [enterLobby, leaveLobby, connected]);
+  }, [clearRoomClosed, enterLobby, leaveLobby, connected]);
 
   // A failed action releases the busy state so the buttons re-enable.
   useEffect(() => {
