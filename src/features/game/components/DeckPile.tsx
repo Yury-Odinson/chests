@@ -24,7 +24,7 @@ export function DeckPile({ count }: { count: number }) {
             <span className="absolute inset-0 translate-x-1 translate-y-1 rounded-[10px] bg-stone-950/55" />
             <span className="absolute inset-0 translate-x-0.5 translate-y-0.5 rounded-[10px] bg-stone-950/45" />
             <img
-              src="/card-back.png"
+              src="/card-back.webp"
               alt="Колода"
               className="relative h-full w-full rounded-[10px] object-cover shadow-[0_10px_28px_rgba(0,0,0,0.5)]"
               draggable={false}

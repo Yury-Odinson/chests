@@ -331,7 +331,7 @@ function FlyingCard({
         <FaceCard card={flight.card} big={flight.reveal} />
       ) : (
         <img
-          src="/card-back.png"
+          src="/card-back.webp"
           alt=""
           draggable={false}
           className="h-full w-full rounded-[5px] object-cover shadow-[0_8px_22px_rgba(0,0,0,0.5)]"

@@ -231,7 +231,7 @@ function LobbyScene({
       className="relative flex h-full w-full items-center justify-center overflow-hidden bg-stone-950 bg-cover bg-center px-6 py-10"
       style={{
         backgroundImage:
-          "linear-gradient(90deg, rgba(8, 6, 5, 0.78) 0%, rgba(8, 6, 5, 0.44) 42%, rgba(8, 6, 5, 0.2) 72%), linear-gradient(180deg, rgba(8, 6, 5, 0.1) 0%, rgba(8, 6, 5, 0.56) 100%), url('/welcome-bg.png')",
+          "linear-gradient(90deg, rgba(8, 6, 5, 0.78) 0%, rgba(8, 6, 5, 0.44) 42%, rgba(8, 6, 5, 0.2) 72%), linear-gradient(180deg, rgba(8, 6, 5, 0.1) 0%, rgba(8, 6, 5, 0.56) 100%), url('/welcome-bg.webp')",
       }}
     >
       <div className="relative z-10 w-full max-w-md">
@@ -343,7 +343,7 @@ function PlayArea({
       className="game-scene-bg absolute inset-0 overflow-hidden bg-stone-950 bg-cover"
       style={{
         backgroundImage:
-          "linear-gradient(180deg, rgba(9, 6, 5, 0.06) 0%, rgba(9, 6, 5, 0.16) 58%, rgba(9, 6, 5, 0.58) 100%), url('/game-bg.png')",
+          "linear-gradient(180deg, rgba(9, 6, 5, 0.06) 0%, rgba(9, 6, 5, 0.16) 58%, rgba(9, 6, 5, 0.58) 100%), url('/game-bg.webp')",
       }}
     >
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_56%_54%,rgba(255,190,96,0.08),rgba(0,0,0,0)_34%),linear-gradient(90deg,rgba(0,0,0,0.28),rgba(0,0,0,0)_25%,rgba(0,0,0,0)_75%,rgba(0,0,0,0.26))]" />
@@ -540,7 +540,7 @@ function MascotHint({
         <span className="absolute -bottom-3 left-10 h-6 w-6 rotate-45 border-b-2 border-r-2 border-stone-900 bg-amber-50" />
       </div>
       <img
-        src="/mascot.png"
+        src="/mascot.webp"
         alt="Маскот игры"
         className="game-mascot-image pointer-events-none h-auto select-none drop-shadow-[0_20px_28px_rgba(0,0,0,0.5)]"
         draggable={false}
@@ -675,7 +675,7 @@ function MiniCardFan({ count }: { count: number }) {
       {visibleCards.map((_, index) => (
         <img
           key={index}
-          src="/card-back.png"
+          src="/card-back.webp"
           alt=""
           draggable={false}
           className="h-7 w-5 rounded-[4px] object-cover shadow-sm"
@@ -758,7 +758,7 @@ function JoinPrompt({
         className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-stone-950 bg-cover bg-center px-6 py-10 text-amber-50"
         style={{
           backgroundImage:
-            "linear-gradient(90deg, rgba(8, 6, 5, 0.78) 0%, rgba(8, 6, 5, 0.44) 42%, rgba(8, 6, 5, 0.2) 72%), linear-gradient(180deg, rgba(8, 6, 5, 0.1) 0%, rgba(8, 6, 5, 0.56) 100%), url('/welcome-bg.png')",
+            "linear-gradient(90deg, rgba(8, 6, 5, 0.78) 0%, rgba(8, 6, 5, 0.44) 42%, rgba(8, 6, 5, 0.2) 72%), linear-gradient(180deg, rgba(8, 6, 5, 0.1) 0%, rgba(8, 6, 5, 0.56) 100%), url('/welcome-bg.webp')",
         }}
       >
         <p className="rounded-2xl border border-amber-100/20 bg-[#160f0b]/88 px-5 py-4 text-sm text-amber-50/70 shadow-[0_24px_80px_rgba(0,0,0,0.56)]">
@@ -781,7 +781,7 @@ function JoinPrompt({
       className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-stone-950 bg-cover bg-center px-6 py-10 text-amber-50"
       style={{
         backgroundImage:
-          "linear-gradient(90deg, rgba(8, 6, 5, 0.78) 0%, rgba(8, 6, 5, 0.44) 42%, rgba(8, 6, 5, 0.2) 72%), linear-gradient(180deg, rgba(8, 6, 5, 0.1) 0%, rgba(8, 6, 5, 0.56) 100%), url('/welcome-bg.png')",
+          "linear-gradient(90deg, rgba(8, 6, 5, 0.78) 0%, rgba(8, 6, 5, 0.44) 42%, rgba(8, 6, 5, 0.2) 72%), linear-gradient(180deg, rgba(8, 6, 5, 0.1) 0%, rgba(8, 6, 5, 0.56) 100%), url('/welcome-bg.webp')",
       }}
     >
       <section className="relative z-10 w-full max-w-md rounded-2xl border border-amber-100/20 bg-[#160f0b]/88 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.56)]">
