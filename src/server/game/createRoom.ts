@@ -15,6 +15,7 @@ export function createRoom(args: {
     hand: [],
     chests: [],
     connected: true,
+    isBot: false,
   };
   return {
     id: roomIdGen(),
@@ -27,5 +28,6 @@ export function createRoom(args: {
     winnerIds: [],
     log: [],
     createdAt: new Date().toISOString(),
+    botMemory: {},
   };
 }

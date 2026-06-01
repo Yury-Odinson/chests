@@ -1,4 +1,10 @@
-import type { ClientGameState, GameLogItem, Rank, Suit } from "./game";
+import type {
+  ClientGameState,
+  GameLogItem,
+  Rank,
+  RoomSummary,
+  Suit,
+} from "./game";
 
 export interface RoomCreatePayload {
   playerName: string;
@@ -20,14 +26,17 @@ export interface RoomStartPayload {
 export interface RoomFinishPayload {
   roomId: string;
 }
+export interface RoomAddBotPayload {
+  roomId: string;
+}
+export interface RoomKickPayload {
+  roomId: string;
+  targetPlayerId: string;
+}
 export interface GameAskRankPayload {
   roomId: string;
   targetPlayerId: string;
   rank: Rank;
-}
-export interface GameGuessSuitPayload {
-  roomId: string;
-  suit: Suit;
 }
 export interface GameGuessCountPayload {
   roomId: string;
@@ -36,6 +45,10 @@ export interface GameGuessCountPayload {
 export interface GameGuessSuitsPayload {
   roomId: string;
   suits: Suit[];
+}
+
+export interface RoomListPayload {
+  rooms: RoomSummary[];
 }
 
 export interface RoomCreatedPayload {
@@ -51,21 +64,28 @@ export interface GameErrorPayload {
 }
 
 export interface ClientToServerEvents {
+  "lobby:join": () => void;
+  "lobby:leave": () => void;
   "room:create": (payload: RoomCreatePayload) => void;
   "room:join": (payload: RoomJoinPayload) => void;
   "room:rejoin": (payload: RoomRejoinPayload) => void;
   "room:leave": (payload: RoomLeavePayload) => void;
   "room:start": (payload: RoomStartPayload) => void;
   "room:finish": (payload: RoomFinishPayload) => void;
+  "room:add-bot": (payload: RoomAddBotPayload) => void;
+  "room:kick": (payload: RoomKickPayload) => void;
   "game:ask-rank": (payload: GameAskRankPayload) => void;
-  "game:guess-suit": (payload: GameGuessSuitPayload) => void;
   "game:guess-count": (payload: GameGuessCountPayload) => void;
   "game:guess-suits": (payload: GameGuessSuitsPayload) => void;
 }
 
 export interface ServerToClientEvents {
+  "room:list": (payload: RoomListPayload) => void;
   "room:created": (payload: RoomCreatedPayload) => void;
   "room:joined": (payload: RoomJoinedPayload) => void;
+  "session:invalid": () => void;
+  "room:closed": () => void;
+  "room:kicked": () => void;
   "game:state": (state: ClientGameState) => void;
   "game:log": (item: GameLogItem) => void;
   "game:error": (payload: GameErrorPayload) => void;

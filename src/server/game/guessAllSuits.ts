@@ -1,7 +1,8 @@
 import type { GameRoom, Suit } from "@/shared/types/game";
+import { forgetRankForTarget, observeSuitsAbsent } from "./botMemory";
 import { collectChests } from "./collectChests";
 import { drawCard } from "./drawCard";
-import { maybeFinish, passTurn } from "./finalize";
+import { keepTurn, maybeFinish, passTurn } from "./finalize";
 import {
   err,
   findPlayer,
@@ -49,13 +50,16 @@ export function guessAllSuits(
       ...p,
       hand: [...p.hand, ...targetCards],
     }));
+    // All of the rank left the target — wipe any deductions about it.
+    next = { ...next, botMemory: forgetRankForTarget(next, targetId, rank) };
     const log = makeLog(
       `**${asker.name}** верно назвал все масти: **${args.suits.join(", ")}**. Забирает **${count}** карт.`,
-      "success"
+      "success",
+      { fromPlayerId: targetId, toPlayerId: args.askerId, cards: targetCards }
     );
     const chest = collectChests(next, args.askerId);
-    const cleared: GameRoom = { ...chest.room, pendingGuess: null };
-    const final = maybeFinish(cleared, [log, ...chest.logs]);
+    const cont = keepTurn(chest.room, args.askerId);
+    const final = maybeFinish(cont.room, [log, ...chest.logs, ...cont.logs]);
     return ok(final.room, final.logs);
   }
 
@@ -63,7 +67,11 @@ export function guessAllSuits(
     `**${asker.name}** назвал **${args.suits.join(", ")}**. Неверно: **${wrongSuits.join(", ")}**.`,
     "error"
   );
-  const draw = drawCard(room, args.askerId);
+  const observed: GameRoom = {
+    ...room,
+    botMemory: observeSuitsAbsent(room, targetId, rank, wrongSuits),
+  };
+  const draw = drawCard(observed, args.askerId);
   const turn = passTurn(draw.room, args.askerId);
   const final = maybeFinish(turn.room, [log, ...draw.logs, ...turn.logs]);
   return ok(final.room, final.logs);

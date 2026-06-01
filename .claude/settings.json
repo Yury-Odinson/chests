@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(fuser -k 3000/tcp)",
+      "Bash(npx tsx *)",
+      "Bash(curl -s -o /dev/null -w \"health: %{http_code}\\\\n\" --max-time 3 http://localhost:3000/)"
+    ]
+  }
+}

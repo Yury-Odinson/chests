@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
 import type {
   Card,
+  CardTransfer,
   GameLogItem,
   GameLogKind,
   GameRoom,
@@ -11,13 +12,15 @@ import type { EngineResult } from "./types";
 
 export function makeLog(
   message: string,
-  kind: GameLogKind = "neutral"
+  kind: GameLogKind = "neutral",
+  transfer?: CardTransfer
 ): GameLogItem {
   return {
     id: nanoid(8),
     createdAt: new Date().toISOString(),
     message,
     kind,
+    ...(transfer ? { transfer } : {}),
   };
 }
 

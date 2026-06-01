@@ -33,6 +33,206 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.game-scene-bg {
+  --game-bg-position: 58%;
+  --game-bg-position-factor: 0.58;
+  --game-player-nudge-x: 0%;
+  --game-seat-width: 148px;
+  --game-table-control-width: 360px;
+  background-position: var(--game-bg-position) center;
+}
+
+.game-image-layer {
+  --game-bg-rendered-width: calc(100vh * 1586 / 672);
+  height: 100vh;
+  left: calc(
+    (100vw - var(--game-bg-rendered-width)) *
+      var(--game-bg-position-factor)
+  );
+  top: 0;
+  width: var(--game-bg-rendered-width);
+}
+
+.game-player-seat {
+  width: var(--game-seat-width);
+}
+
+.game-seat-slot-1 {
+  left: calc(42.3% + var(--game-player-nudge-x));
+  top: 58%;
+}
+
+.game-seat-slot-2 {
+  left: calc(49.5% + var(--game-player-nudge-x));
+  top: 35.5%;
+}
+
+.game-seat-slot-3 {
+  left: calc(61.5% + var(--game-player-nudge-x));
+  top: 35.5%;
+}
+
+.game-seat-slot-4 {
+  left: calc(69.3% + var(--game-player-nudge-x));
+  top: 58%;
+}
+
+.game-table-control {
+  left: 55.5%;
+  top: 58%;
+  width: var(--game-table-control-width);
+}
+
+.game-my-seat {
+  left: 55.5%;
+}
+
+.game-deck {
+  left: 10%;
+  top: 10%;
+}
+
+.game-deck-card {
+  height: 280px;
+  width: 200px;
+}
+
+.game-mascot {
+  bottom: 0;
+  left: 88px;
+}
+
+.game-mascot-image {
+  width: 340px;
+}
+
+.game-mascot-bubble {
+  left: 245px;
+  top: 42px;
+  width: 250px;
+}
+
+@media (max-width: 1600px) {
+  .game-scene-bg {
+    --game-bg-position: 66%;
+    --game-bg-position-factor: 0.66;
+    --game-seat-width: 140px;
+    --game-table-control-width: 340px;
+  }
+
+  .game-mascot-image {
+    width: 310px;
+  }
+
+  .game-mascot-bubble {
+    left: 225px;
+    width: 230px;
+  }
+
+  .game-deck-card {
+    height: 252px;
+    width: 180px;
+  }
+}
+
+@media (max-width: 1360px) {
+  .game-scene-bg {
+    --game-bg-position: 76%;
+    --game-bg-position-factor: 0.76;
+    --game-player-nudge-x: 0%;
+    --game-seat-width: 132px;
+    --game-table-control-width: 320px;
+  }
+
+  .game-mascot {
+    left: 56px;
+  }
+
+  .game-mascot-image {
+    width: 260px;
+  }
+
+  .game-mascot-bubble {
+    left: 190px;
+    top: 34px;
+    width: 205px;
+  }
+
+  .game-deck {
+    left: 10%;
+    top: 10%;
+  }
+
+  .game-deck-card {
+    height: 224px;
+    width: 160px;
+  }
+}
+
+@media (max-width: 1180px) {
+  .game-scene-bg {
+    --game-bg-position: 84%;
+    --game-bg-position-factor: 0.84;
+    --game-player-nudge-x: 0%;
+    --game-seat-width: 122px;
+    --game-table-control-width: 300px;
+  }
+
+  .game-mascot {
+    left: 36px;
+  }
+
+  .game-mascot-image {
+    width: 210px;
+  }
+
+  .game-deck {
+    left: 10%;
+    top: 10%;
+  }
+
+  .game-deck-card {
+    height: 200px;
+    width: 143px;
+  }
+
+  .game-mascot-bubble {
+    left: 150px;
+    width: 180px;
+    font-size: 12px;
+  }
+
+  .game-seat-slot-1 {
+    left: 42.3%;
+    top: 58%;
+  }
+
+  .game-seat-slot-2 {
+    left: 49.5%;
+    top: 35.5%;
+  }
+
+  .game-seat-slot-3 {
+    left: 61.5%;
+    top: 35.5%;
+  }
+
+  .game-seat-slot-4 {
+    left: 69.3%;
+    top: 58%;
+  }
+}
+
+@media (min-aspect-ratio: 793/336) {
+  .game-image-layer {
+    --game-bg-rendered-height: calc(100vw * 672 / 1586);
+    height: var(--game-bg-rendered-height);
+    left: 0;
+    top: calc((100vh - var(--game-bg-rendered-height)) / 2);
+    width: 100vw;
+  }
+}
+
 @media (prefers-color-scheme: dark) {
   html {
     color-scheme: dark;

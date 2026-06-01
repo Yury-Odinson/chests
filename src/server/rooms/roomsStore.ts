@@ -23,4 +23,22 @@ export const roomsStore = {
   all(): GameRoom[] {
     return [...rooms.values()];
   },
+  /**
+   * Remove rooms with no connected players that are older than `maxAgeMs`.
+   * Safety net for rooms that somehow outlived their players. Returns the
+   * number of rooms removed.
+   */
+  sweep(maxAgeMs: number, now: number = Date.now()): number {
+    let removed = 0;
+    for (const room of rooms.values()) {
+      // Bots are always "connected"; a room is only truly empty if no human is.
+      const empty = !room.players.some((p) => !p.isBot && p.connected);
+      const stale = now - new Date(room.createdAt).getTime() > maxAgeMs;
+      if (empty && stale) {
+        rooms.delete(room.id);
+        removed += 1;
+      }
+    }
+    return removed;
+  },
 };

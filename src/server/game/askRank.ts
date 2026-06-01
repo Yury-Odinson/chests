@@ -1,4 +1,5 @@
 import type { GameRoom, Rank } from "@/shared/types/game";
+import { observeRankAsk } from "./botMemory";
 import { drawCard } from "./drawCard";
 import { maybeFinish, passTurn } from "./finalize";
 import {
@@ -29,13 +30,19 @@ export function askRank(
   }
 
   const targetCount = countRankInHand(target, args.rank);
+  const botMemory = observeRankAsk(
+    room,
+    args.targetId,
+    args.rank,
+    targetCount > 0
+  );
 
   if (targetCount === 0) {
     const askLog = makeLog(
       `**${asker.name}** спросил у **${target.name}**: «**${args.rank}**?» — нет.`,
       "muted"
     );
-    const draw = drawCard(room, args.askerId);
+    const draw = drawCard({ ...room, botMemory }, args.askerId);
     const turn = passTurn(draw.room, args.askerId);
     const final = maybeFinish(turn.room, [
       askLog,
@@ -51,6 +58,7 @@ export function askRank(
   );
   const next: GameRoom = {
     ...room,
+    botMemory,
     pendingGuess: {
       stage: "awaiting-detail",
       askerId: args.askerId,

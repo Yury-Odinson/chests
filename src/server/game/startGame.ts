@@ -18,8 +18,8 @@ export function startGame(
   if (room.players.length < 2) {
     return err("Нужно минимум 2 игрока");
   }
-  if (room.players.length > 4) {
-    return err("Максимум 4 игрока");
+  if (room.players.length > 5) {
+    return err("Максимум 5 игроков");
   }
   if (args.hostId && args.hostId !== room.hostId) {
     return err("Только хост может начать игру");
