@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useGameSocket } from "@/features/game/SocketProvider";
 import { AskFlow } from "@/features/game/components/AskFlow";
@@ -369,7 +369,12 @@ function PlayArea({
 
       <DeckPile count={state.deckCount} />
 
-      <MascotHint />
+      <MascotHint
+        state={state}
+        activeTargetId={activeTargetId}
+        isOwnAskStage={isOwnAskStage}
+        canChooseTarget={possibleTargets.length > 0}
+      />
 
       <div className="game-image-layer pointer-events-none absolute z-30">
         {opponents.slice(0, OPPONENT_SEAT_SLOTS.length).map((player, index) => {
@@ -405,17 +410,139 @@ function PlayArea({
   );
 }
 
-function MascotHint() {
+const HINTS_STORAGE_KEY = "chests:hints-enabled";
+
+/**
+ * A transient event hint (chest formed / wrong guess) shown briefly after the
+ * relevant log entry, then we fall back to the steady phase hint. Derived from
+ * the latest log entry rather than a dedicated server signal.
+ */
+function eventHintFromLog(state: ClientGameState): string | null {
+  const last = state.log[state.log.length - 1];
+  if (!last) return null;
+  const mine =
+    state.currentPlayerId === state.me.id ? "ты" : "соперник";
+  if (last.message.includes("собрал сундук")) {
+    return "Клад собран! Все четыре карты ранга — в сундуке. 🎉";
+  }
+  if (last.kind === "error") {
+    return mine === "ты"
+      ? "Не угадал — берёшь карту из колоды, ход переходит дальше."
+      : "Соперник промахнулся — ход переходит дальше.";
+  }
+  return null;
+}
+
+/** The steady, phase-based hint for the current player. */
+function phaseHint(
+  state: ClientGameState,
+  isOwnAskStage: boolean,
+  activeTargetId: string | null,
+  canChooseTarget: boolean
+): string {
+  const pending = state.pendingGuess;
+
+  // Stages 3 & 4: a guess is in progress and it's my turn to detail it.
+  if (pending && pending.askerId === state.me.id) {
+    if (pending.stage === "awaiting-detail") {
+      return `У соперника есть «${pending.rank}». Назови, сколько таких карт у него на руках.`;
+    }
+    return `Количество верное! Теперь назови масти всех «${pending.rank}» — их ${pending.count}.`;
+  }
+
+  // Someone else is acting (their turn, or their guess in progress).
+  if (state.currentPlayerId !== state.me.id || pending) {
+    return "Ход соперника. Следи за столом и запоминай, у кого что есть.";
+  }
+
+  // My turn, no pending guess → ask stage (stages 1 & 2).
+  if (isOwnAskStage) {
+    if (!canChooseTarget) {
+      return "Сейчас спросить не у кого — ждём, пока у соперников появятся карты.";
+    }
+    if (!activeTargetId) {
+      return "Твой ход! Выбери соперника за столом, у которого спросишь карты.";
+    }
+    return "Теперь выбери ранг — спрашивать можно только то, что есть у тебя на руке.";
+  }
+
+  return "Следи за столом. Я подскажу, если что.";
+}
+
+function MascotHint({
+  state,
+  activeTargetId,
+  isOwnAskStage,
+  canChooseTarget,
+}: {
+  state: ClientGameState;
+  activeTargetId: string | null;
+  isOwnAskStage: boolean;
+  canChooseTarget: boolean;
+}) {
+  const [enabled, setEnabled] = useState(() => {
+    if (typeof window === "undefined") return true;
+    return localStorage.getItem(HINTS_STORAGE_KEY) !== "off";
+  });
+  const [eventHint, setEventHint] = useState<string | null>(null);
+  const lastLogIdRef = useRef<string | null>(null);
+
+  const toggle = () => {
+    setEnabled((on) => {
+      const next = !on;
+      localStorage.setItem(HINTS_STORAGE_KEY, next ? "on" : "off");
+      return next;
+    });
+  };
+
+  // When a new log entry arrives, surface its event hint for a few seconds.
+  const latest = state.log[state.log.length - 1];
+  useEffect(() => {
+    if (!latest) return;
+    if (lastLogIdRef.current === latest.id) return;
+    lastLogIdRef.current = latest.id;
+    const hint = eventHintFromLog(state);
+    if (!hint) return;
+    setEventHint(hint);
+    const t = setTimeout(() => setEventHint(null), 3200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [latest?.id]);
+
+  if (!enabled) {
+    return (
+      <button
+        type="button"
+        onClick={toggle}
+        className="pointer-events-auto absolute bottom-4 left-4 z-[45] rounded-full border border-amber-200/30 bg-zinc-950/70 px-3 py-2 text-xs font-medium text-amber-50 shadow-lg backdrop-blur-[2px] transition hover:bg-zinc-900/80"
+      >
+        💡 Включить подсказки
+      </button>
+    );
+  }
+
+  const message =
+    eventHint ??
+    phaseHint(state, isOwnAskStage, activeTargetId, canChooseTarget);
+
   return (
-    <aside className="game-mascot pointer-events-none absolute z-[45]">
-      <div className="game-mascot-bubble absolute rounded-[22px] border-2 border-stone-900 bg-amber-50 px-4 py-3 text-sm font-semibold leading-snug text-stone-900 shadow-[0_12px_30px_rgba(0,0,0,0.38)]">
-        Выбирай соперника за столом. Я подскажу, если что.
+    <aside className="game-mascot absolute z-[45]">
+      <div className="game-mascot-bubble pointer-events-none absolute rounded-[22px] border-2 border-stone-900 bg-amber-50 px-4 py-3 text-sm font-semibold leading-snug text-stone-900 shadow-[0_12px_30px_rgba(0,0,0,0.38)]">
+        {message}
+        <button
+          type="button"
+          onClick={toggle}
+          title="Скрыть подсказки"
+          className="pointer-events-auto absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border-2 border-stone-900 bg-amber-50 text-xs leading-none text-stone-700 transition hover:bg-amber-100"
+        >
+          ✕
+        </button>
         <span className="absolute -bottom-3 left-10 h-6 w-6 rotate-45 border-b-2 border-r-2 border-stone-900 bg-amber-50" />
       </div>
       <img
         src="/mascot.png"
         alt="Маскот игры"
-        className="game-mascot-image h-auto select-none drop-shadow-[0_20px_28px_rgba(0,0,0,0.5)]"
+        className="game-mascot-image pointer-events-none h-auto select-none drop-shadow-[0_20px_28px_rgba(0,0,0,0.5)]"
         draggable={false}
       />
     </aside>
