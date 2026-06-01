@@ -16,6 +16,7 @@ export default function LobbyPage() {
     name,
     hydrated,
     rooms,
+    online,
     enterLobby,
     leaveLobby,
     clearRoomClosed,
@@ -82,6 +83,13 @@ export default function LobbyPage() {
               Вы вошли как{" "}
               <span className="font-semibold text-amber-100">{name}</span>.
             </p>
+            {connected && (
+              <p className="mt-1 flex items-center gap-1.5 text-xs text-amber-50/55">
+                <span className="inline-block h-2 w-2 rounded-full bg-emerald-400" />
+                сейчас в сети:{" "}
+                <span className="font-semibold text-amber-100">{online}</span>
+              </p>
+            )}
           </div>
           <button
             type="button"
