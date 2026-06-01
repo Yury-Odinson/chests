@@ -51,6 +51,11 @@ export interface RoomListPayload {
   rooms: RoomSummary[];
 }
 
+export interface PresencePayload {
+  /** Total active socket connections to the server. */
+  online: number;
+}
+
 export interface RoomCreatedPayload {
   roomId: string;
   playerId: string;
@@ -81,6 +86,7 @@ export interface ClientToServerEvents {
 
 export interface ServerToClientEvents {
   "room:list": (payload: RoomListPayload) => void;
+  presence: (payload: PresencePayload) => void;
   "room:created": (payload: RoomCreatedPayload) => void;
   "room:joined": (payload: RoomJoinedPayload) => void;
   "session:invalid": () => void;

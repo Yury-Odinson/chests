@@ -33,8 +33,11 @@ import {
   broadcastLobby,
   broadcastLogs,
   broadcastState,
+  emitPresence,
   emitRoomList,
   LOBBY_ROOM,
+  onlineCount,
+  schedulePresence,
   type GameIO,
 } from "./broadcast";
 import { maybeScheduleBotTurn } from "./botRunner";
@@ -69,6 +72,7 @@ export function registerHandlers(io: GameIO, socket: GameSocket): void {
   socket.on("lobby:join", () => {
     socket.join(LOBBY_ROOM);
     emitRoomList(socket);
+    emitPresence(socket, onlineCount(io));
   });
 
   socket.on("lobby:leave", () => {
@@ -264,6 +268,10 @@ export function registerHandlers(io: GameIO, socket: GameSocket): void {
   });
 
   socket.on("disconnect", () => {
+    // Presence drops on any disconnect, lobby or in-game. The throttled
+    // broadcast fires after this socket is already off clientsCount, so it
+    // reads the correct, decremented count — no manual adjustment needed.
+    schedulePresence(io);
     const room = roomsStore.findBySocketId(socket.id);
     if (!room) return;
     handleLeave(io, socket, room.id, true);

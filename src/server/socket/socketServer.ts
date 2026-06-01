@@ -7,7 +7,7 @@ import type {
   SocketData,
 } from "@/shared/types/events";
 import { roomsStore } from "@/server/rooms/roomsStore";
-import { broadcastLobby } from "./broadcast";
+import { broadcastLobby, schedulePresence } from "./broadcast";
 import { registerHandlers } from "./handlers";
 
 const SWEEP_INTERVAL_MS = 5 * 60 * 1000;
@@ -25,6 +25,7 @@ export function attachSocketServer(httpServer: HttpServer): void {
 
   io.on("connection", (socket) => {
     registerHandlers(io, socket);
+    schedulePresence(io);
   });
 
   const sweep = setInterval(() => {

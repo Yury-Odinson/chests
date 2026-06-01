@@ -85,6 +85,7 @@ interface SocketContextValue {
   setName: (name: string) => void;
   hydrated: boolean;
   rooms: RoomSummary[];
+  online: number;
   enterLobby: () => void;
   leaveLobby: () => void;
 }
@@ -102,6 +103,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const [roomClosed, setRoomClosed] = useState(false);
   const [name, setNameState] = useState("");
   const [rooms, setRooms] = useState<RoomSummary[]>([]);
+  const [online, setOnline] = useState(0);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
@@ -172,6 +174,9 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     s.on("room:list", ({ rooms: next }) => {
       setRooms(next);
     });
+    s.on("presence", ({ online: next }) => {
+      setOnline(next);
+    });
     s.on("session:invalid", () => {
       // Stale auto-rejoin: the room no longer exists. Forget it silently
       // instead of surfacing an error or hanging on "looking for room…".
@@ -220,6 +225,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       setName,
       hydrated,
       rooms,
+      online,
       enterLobby,
       leaveLobby,
     }),
@@ -240,6 +246,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       setName,
       hydrated,
       rooms,
+      online,
       enterLobby,
       leaveLobby,
     ]
