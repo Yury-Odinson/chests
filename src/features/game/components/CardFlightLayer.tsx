@@ -1,27 +1,43 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { Card, ClientGameState } from "@/shared/types/game";
+import type { Card, ClientGameState, GameLogItem } from "@/shared/types/game";
 
 /**
  * Animates cards moving between places on the table. The server only sends
- * state snapshots, so this is purely a client-side derivation: on each new
+ * state snapshots, so this is mostly a client-side derivation: on each new
  * state we diff card counts against the previous one to figure out who lost
  * cards (sources) and who gained them (dests), then fly a card from each
  * source anchor to each dest anchor.
  *
- * We can only show a real face for cards that land in OUR hand (we never see
- * opponents' cards); everything else flies as a card back.
+ * Two flavours of flight:
+ *  - A public capture (correct count + suits) arrives with a `transfer` on its
+ *    log entry: the exact cards are public knowledge, so we show them face-up,
+ *    let them hover and grow at the current owner for a beat, then fly them to
+ *    the winner.
+ *  - Everything else (deck draws, hidden movement) flies fast as a card back;
+ *    a real face is only shown when those cards land in OUR own hand.
  */
 
-const FLIGHT_MS = 520;
+// Hidden/quick flights (deck draw, etc.).
+const QUICK_FLIGHT_MS = 520;
+
+// Public capture: hover-and-grow, then a slightly longer glide.
+const HOLD_MS = 1000;
+const CAPTURE_FLIGHT_MS = 620;
 
 interface Flight {
   id: string;
   fromAnchor: string;
   toAnchor: string;
-  /** Concrete card if we know it (lands in our hand), else a face-down back. */
+  /** Concrete card if we know it (public capture, or lands in our hand). */
   card: Card | null;
+  /** Public capture: hold + grow at source before flying. */
+  reveal: boolean;
+  /** Position within its capture group, used to fan out multiple cards. */
+  spreadIndex: number;
+  /** Total cards in this capture group (1–3). */
+  spreadCount: number;
 }
 
 interface RenderedFlight extends Flight {
@@ -59,15 +75,55 @@ function newCardsInMyHand(
   return curr.me.hand.filter((c) => !before.has(c.id));
 }
 
+/** Log entries present in `curr` but not in `prev`, matched by id. */
+function newLogEntries(
+  prev: ClientGameState,
+  curr: ClientGameState
+): GameLogItem[] {
+  const before = new Set(prev.log.map((l) => l.id));
+  return curr.log.filter((l) => !before.has(l.id));
+}
+
 /**
- * Diff two states into a list of flights. Sources are entities whose card
- * count dropped (players + the deck); dests are players whose count rose.
- * A turn moves cards in one direction, so this is usually one source → one
- * dest, but we match generally to stay robust.
+ * Public captures from the new log entries. Each becomes a face-up reveal
+ * flight from the loser's seat to the winner's seat.
+ */
+function captureFlights(
+  prev: ClientGameState,
+  curr: ClientGameState
+): { flights: Flight[]; movedCardIds: Set<string> } {
+  const flights: Flight[] = [];
+  const movedCardIds = new Set<string>();
+
+  for (const entry of newLogEntries(prev, curr)) {
+    const t = entry.transfer;
+    if (!t) continue;
+    t.cards.forEach((card, k) => {
+      movedCardIds.add(card.id);
+      flights.push({
+        id: `capture-${entry.id}-${k}`,
+        fromAnchor: `seat-${t.fromPlayerId}`,
+        toAnchor: `seat-${t.toPlayerId}`,
+        card,
+        reveal: true,
+        spreadIndex: k,
+        spreadCount: t.cards.length,
+      });
+    });
+  }
+
+  return { flights, movedCardIds };
+}
+
+/**
+ * Diff two states into hidden flights (deck draws, anything not already
+ * accounted for by a public capture). Sources are entities whose card count
+ * dropped (players + the deck); dests are players whose count rose.
  */
 function diffFlights(
   prev: ClientGameState,
-  curr: ClientGameState
+  curr: ClientGameState,
+  alreadyMoved: number
 ): Flight[] {
   const sources: { anchor: string; n: number }[] = [];
   const dests: { anchor: string; n: number; isMe: boolean }[] = [];
@@ -85,7 +141,28 @@ function diffFlights(
       dests.push({ anchor: `seat-${p.id}`, n: delta, isMe: p.id === curr.me.id });
   }
 
-  if (sources.length === 0 || dests.length === 0) return [];
+  // A public capture already moved `alreadyMoved` cards both out of a source
+  // and into a dest; those net deltas are covered by the reveal flights, so
+  // only animate what's left (typically the asker's 1-card deck draw is not
+  // present on a capture turn, so this is usually empty).
+  let remaining = alreadyMoved;
+  for (const s of sources) {
+    if (remaining <= 0) break;
+    const cut = Math.min(s.n, remaining);
+    s.n -= cut;
+    remaining -= cut;
+  }
+  remaining = alreadyMoved;
+  for (const d of dests) {
+    if (remaining <= 0) break;
+    const cut = Math.min(d.n, remaining);
+    d.n -= cut;
+    remaining -= cut;
+  }
+
+  const liveSources = sources.filter((s) => s.n > 0);
+  const liveDests = dests.filter((d) => d.n > 0);
+  if (liveSources.length === 0 || liveDests.length === 0) return [];
 
   // Faces we can attach: only the concrete cards that arrived in our hand.
   const myNewCards = newCardsInMyHand(prev, curr);
@@ -93,23 +170,25 @@ function diffFlights(
 
   const flights: Flight[] = [];
   let si = 0;
-  let sRemaining = sources[0]?.n ?? 0;
+  let sRemaining = liveSources[0]?.n ?? 0;
 
-  for (const dest of dests) {
+  for (const dest of liveDests) {
     for (let k = 0; k < dest.n; k++) {
-      // Advance to a source that still has cards to give.
-      while (si < sources.length && sRemaining === 0) {
+      while (si < liveSources.length && sRemaining === 0) {
         si++;
-        sRemaining = sources[si]?.n ?? 0;
+        sRemaining = liveSources[si]?.n ?? 0;
       }
-      if (si >= sources.length) break;
+      if (si >= liveSources.length) break;
 
       const card = dest.isMe ? myNewCards[faceIdx++] ?? null : null;
       flights.push({
-        id: `${sources[si].anchor}->${dest.anchor}-${k}-${curr.log.length}`,
-        fromAnchor: sources[si].anchor,
+        id: `${liveSources[si].anchor}->${dest.anchor}-${k}-${curr.log.length}`,
+        fromAnchor: liveSources[si].anchor,
         toAnchor: dest.anchor,
         card,
+        reveal: false,
+        spreadIndex: 0,
+        spreadCount: 1,
       });
       sRemaining--;
     }
@@ -129,7 +208,9 @@ export function CardFlightLayer({ state }: { state: ClientGameState }) {
     // Only animate within an ongoing game.
     if (state.status !== "playing") return;
 
-    const flights = diffFlights(prev, state);
+    const capture = captureFlights(prev, state);
+    const hidden = diffFlights(prev, state, capture.movedCardIds.size);
+    const flights = [...capture.flights, ...hidden];
     if (flights.length === 0) return;
 
     // Resolve anchor positions now (post-render layout).
@@ -143,55 +224,111 @@ export function CardFlightLayer({ state }: { state: ClientGameState }) {
     if (resolved.length === 0) return;
 
     setRendered((cur) => [...cur, ...resolved]);
-
-    const timer = setTimeout(() => {
-      setRendered((cur) =>
-        cur.filter((r) => !resolved.some((x) => x.id === r.id))
-      );
-    }, FLIGHT_MS + 80);
-
-    return () => clearTimeout(timer);
+    // Each card removes itself when its own animation finishes (see
+    // FlyingCard). We deliberately do NOT schedule removal here: this effect
+    // re-runs on every new state, and its cleanup would otherwise cancel the
+    // removal of a still-flying card — leaving captured cards stuck on screen.
   }, [state]);
+
+  const removeFlight = (id: string) =>
+    setRendered((cur) => cur.filter((r) => r.id !== id));
 
   if (rendered.length === 0) return null;
 
   return (
     <div className="pointer-events-none fixed inset-0 z-[60]">
       {rendered.map((f) => (
-        <FlyingCard key={f.id} flight={f} />
+        <FlyingCard key={f.id} flight={f} onDone={removeFlight} />
       ))}
     </div>
   );
 }
 
-function FlyingCard({ flight }: { flight: RenderedFlight }) {
-  const [moved, setMoved] = useState(false);
+type Phase = "start" | "hold" | "fly";
 
-  // Kick the transition on the next frame so the start position paints first.
+function FlyingCard({
+  flight,
+  onDone,
+}: {
+  flight: RenderedFlight;
+  onDone: (id: string) => void;
+}) {
+  // Hidden flights: a simple two-step start→fly. Reveal flights: start (paint
+  // at source), hold (grow in place for a beat), then fly to the winner.
+  const [phase, setPhase] = useState<Phase>("start");
+
   useEffect(() => {
-    const id = requestAnimationFrame(() => setMoved(true));
-    return () => cancelAnimationFrame(id);
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    // Total on-screen lifetime, after which the card removes itself. Tied to
+    // the card (not the diff effect), so incoming state updates can't cancel it
+    // and leave the card stuck on screen.
+    const lifespan = flight.reveal
+      ? HOLD_MS + CAPTURE_FLIGHT_MS + 120
+      : QUICK_FLIGHT_MS + 80;
+    timers.push(setTimeout(() => onDone(flight.id), lifespan));
+
+    if (!flight.reveal) {
+      const id = requestAnimationFrame(() => setPhase("fly"));
+      return () => {
+        cancelAnimationFrame(id);
+        timers.forEach(clearTimeout);
+      };
+    }
+    const raf = requestAnimationFrame(() => setPhase("hold"));
+    timers.push(setTimeout(() => setPhase("fly"), HOLD_MS));
+    return () => {
+      cancelAnimationFrame(raf);
+      timers.forEach(clearTimeout);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const pos = moved ? flight.to : flight.from;
-  const W = 44;
-  const H = 62;
+  const flying = phase === "fly";
+  const pos = flying ? flight.to : flight.from;
+
+  // Reveal cards are bigger so they read clearly while hovering.
+  const W = flight.reveal ? 60 : 44;
+  const H = flight.reveal ? 84 : 62;
+
+  // Fan multiple captured cards out horizontally so every one is visible
+  // instead of stacking in a single spot. Centered: e.g. 3 cards → -1,0,+1.
+  const GAP = W * 0.9;
+  const spreadX = flight.reveal
+    ? (flight.spreadIndex - (flight.spreadCount - 1) / 2) * GAP
+    : 0;
+
+  const scale = flight.reveal
+    ? phase === "hold"
+      ? 1.18
+      : 1
+    : flying
+    ? 1
+    : 0.9;
+
+  const flightMs = flight.reveal ? CAPTURE_FLIGHT_MS : QUICK_FLIGHT_MS;
+  const easing = "cubic-bezier(0.22,0.61,0.36,1)";
 
   return (
     <div
       className="absolute"
       style={{
-        left: pos.x - W / 2,
+        left: pos.x - W / 2 + spreadX,
         top: pos.y - H / 2,
         width: W,
         height: H,
-        transform: `scale(${moved ? 1 : 0.9})`,
-        opacity: moved ? 1 : 0.85,
-        transition: `left ${FLIGHT_MS}ms cubic-bezier(0.22,0.61,0.36,1), top ${FLIGHT_MS}ms cubic-bezier(0.22,0.61,0.36,1), transform ${FLIGHT_MS}ms ease-out, opacity 160ms ease-out`,
+        transform: `scale(${scale})`,
+        opacity: phase === "start" ? 0.85 : 1,
+        transition: [
+          `left ${flightMs}ms ${easing}`,
+          `top ${flightMs}ms ${easing}`,
+          `transform ${flight.reveal ? 260 : flightMs}ms ease-out`,
+          `opacity 160ms ease-out`,
+        ].join(", "),
+        zIndex: flight.reveal ? 2 + flight.spreadIndex : 1,
       }}
     >
       {flight.card ? (
-        <FaceCard card={flight.card} />
+        <FaceCard card={flight.card} big={flight.reveal} />
       ) : (
         <img
           src="/card-back.png"
@@ -211,7 +348,7 @@ const SUIT_GLYPH: Record<Card["suit"], string> = {
   spades: "♠",
 };
 
-function FaceCard({ card }: { card: Card }) {
+function FaceCard({ card, big = false }: { card: Card; big?: boolean }) {
   const red = card.suit === "hearts" || card.suit === "diamonds";
   return (
     <div
@@ -220,8 +357,12 @@ function FaceCard({ card }: { card: Card }) {
         red ? "text-red-600" : "text-stone-900",
       ].join(" ")}
     >
-      <span className="text-sm font-bold leading-none">{card.rank}</span>
-      <span className="text-base leading-none">{SUIT_GLYPH[card.suit]}</span>
+      <span className={`${big ? "text-lg" : "text-sm"} font-bold leading-none`}>
+        {card.rank}
+      </span>
+      <span className={`${big ? "text-xl" : "text-base"} leading-none`}>
+        {SUIT_GLYPH[card.suit]}
+      </span>
     </div>
   );
 }

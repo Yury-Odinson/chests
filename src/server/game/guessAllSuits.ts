@@ -54,7 +54,8 @@ export function guessAllSuits(
     next = { ...next, botMemory: forgetRankForTarget(next, targetId, rank) };
     const log = makeLog(
       `**${asker.name}** верно назвал все масти: **${args.suits.join(", ")}**. Забирает **${count}** карт.`,
-      "success"
+      "success",
+      { fromPlayerId: targetId, toPlayerId: args.askerId, cards: targetCards }
     );
     const chest = collectChests(next, args.askerId);
     const cont = keepTurn(chest.room, args.askerId);

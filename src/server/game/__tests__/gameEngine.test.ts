@@ -558,6 +558,15 @@ describe("guessCount + guessAllSuits", () => {
     expect(p1.chests).toContain("7");
     expect(p1.hand.filter((c) => c.rank === "7")).toHaveLength(0);
     expect(ok.room.currentPlayerId).toBe("p1");
+
+    // The capture log carries the public card transfer so the client can
+    // animate the exact cards face-up from p2 to p1.
+    const capture = ok.logs.find((l) => l.transfer);
+    expect(capture?.transfer).toEqual({
+      fromPlayerId: "p2",
+      toPlayerId: "p1",
+      cards: [card("7", "spades"), card("7", "clubs")],
+    });
   });
 
   it("guessAllSuits completing a chest empties hand+deck → turn passes to a player who can act", () => {

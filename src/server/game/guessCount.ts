@@ -55,12 +55,12 @@ export function guessCount(
   }
 
   const log = makeLog(
-    `**${asker.name}** сказал **${args.count}**, а на самом деле **${actual}**.`,
+    `**${asker.name}** назвал количество неверно: **${args.count}**.`,
     "error"
   );
   const observed: GameRoom = {
     ...room,
-    botMemory: observeCountWrong(room, targetId, rank, args.count, actual),
+    botMemory: observeCountWrong(room, targetId, rank, args.count),
   };
   const draw = drawCard(observed, args.askerId);
   const turn = passTurn(draw.room, args.askerId);

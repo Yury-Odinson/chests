@@ -102,20 +102,21 @@ export function observeRankAsk(
   );
 }
 
-/** A count guess was wrong; remember it and the now-revealed real count. */
+/**
+ * A count guess was wrong. The real count is NOT public (we don't reveal it),
+ * so the only honest, public takeaways are: this count is wrong, and the rank
+ * is present (we only reach the count stage after a "yes" on ask-rank).
+ */
 export function observeCountWrong(
   room: GameRoom,
   targetId: string,
   rank: Rank,
-  guessed: number,
-  actual: number
+  guessed: number
 ): BotMemory {
   return updateAllBots(room, targetId, rank, (k) => ({
     ...k,
-    knownPresent: actual > 0,
-    knownAbsent: actual === 0,
+    knownPresent: true,
     triedCounts: unique([...k.triedCounts, guessed]),
-    revealedCount: actual,
   }));
 }
 

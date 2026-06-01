@@ -214,7 +214,7 @@ describe("bot memory: observation from real engine flow", () => {
     expect(k.knownPresent).toBe(true);
   });
 
-  it("remembers a wrong count and the revealed actual", () => {
+  it("remembers a wrong count but does NOT learn the hidden actual count", () => {
     const room = makeRoom({
       players: [
         makePlayer({ id: "bot", name: "Bot", isBot: true, hand: [card("7", "hearts")] }),
@@ -235,12 +235,16 @@ describe("bot memory: observation from real engine flow", () => {
     const ok = assertOk(guessCount(room, { askerId: "bot", count: 1 }));
     const k = getKnowledge(ok.room.botMemory, "bot", "p2", "7");
     expect(k.triedCounts).toContain(1);
-    expect(k.revealedCount).toBe(2);
+    // The real count is never revealed publicly, so the bot can't know it.
+    expect(k.revealedCount).toBeNull();
+    // Reaching the count stage still publicly implies the rank is present.
+    expect(k.knownPresent).toBe(true);
   });
 
-  it("a watching bot learns the real count from another player's wrong count", () => {
+  it("a watching bot does NOT learn the real count from another player's wrong count", () => {
     // p2 is the asker (human) and guesses the count wrong; the bot just
-    // watches but should still learn p3's revealed count of 7s.
+    // watches. Since a wrong count never reveals the actual, the bot only
+    // learns that the named count was wrong, not p3's true number of 7s.
     const room = makeRoom({
       currentPlayerId: "p2",
       players: [
@@ -262,7 +266,7 @@ describe("bot memory: observation from real engine flow", () => {
     });
     const ok = assertOk(guessCount(room, { askerId: "p2", count: 1 }));
     const k = getKnowledge(ok.room.botMemory, "bot", "p3", "7");
-    expect(k.revealedCount).toBe(2);
+    expect(k.revealedCount).toBeNull();
     expect(k.triedCounts).toContain(1);
   });
 

@@ -82,11 +82,25 @@ export type GameLogKind =
   | "error"
   | "muted";
 
+/**
+ * Cards publicly moving from one player to another, attached to the log entry
+ * that announced it. Only set when the cards are public knowledge (a correct
+ * count + suits capture), so the client can animate them face-up. Never set
+ * for deck draws or failed guesses.
+ */
+export interface CardTransfer {
+  fromPlayerId: string;
+  toPlayerId: string;
+  cards: Card[];
+}
+
 export interface GameLogItem {
   id: string;
   createdAt: string;
   message: string;
   kind: GameLogKind;
+  /** Public card movement to animate face-up, if any. */
+  transfer?: CardTransfer;
 }
 
 /**
