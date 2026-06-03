@@ -8,8 +8,11 @@ import { CardFlightLayer } from "@/features/game/components/CardFlightLayer";
 import { ChestsList } from "@/features/game/components/ChestsList";
 import { DeckPile } from "@/features/game/components/DeckPile";
 import { GameLog } from "@/features/game/components/GameLog";
+import { MobileLandscapePlayArea } from "@/features/game/components/MobileLandscapePlayArea";
+import { MobilePlayArea } from "@/features/game/components/MobilePlayArea";
 import { MyHand } from "@/features/game/components/MyHand";
 import { WinnerOverlay } from "@/features/game/components/WinnerOverlay";
+import { useLayoutMode } from "@/features/game/hooks/useLayoutMode";
 import type { ClientGameState, PublicPlayer } from "@/shared/types/game";
 
 export default function GamePage({
@@ -60,9 +63,51 @@ export default function GamePage({
   if (!socket) return null;
 
   return (
+    <GameShell
+      roomId={roomId}
+      state={state}
+      socket={socket}
+      connected={connected}
+      error={error}
+      clearError={clearError}
+      onLeave={() => {
+        socket.emit("room:leave", { roomId });
+        setSession(null);
+        clearRoomState();
+        router.push("/lobby");
+      }}
+    />
+  );
+}
+
+function GameShell({
+  roomId,
+  state,
+  socket,
+  connected,
+  error,
+  clearError,
+  onLeave,
+}: {
+  roomId: string;
+  state: ClientGameState;
+  socket: NonNullable<ReturnType<typeof useGameSocket>["socket"]>;
+  connected: boolean;
+  error: string | null;
+  clearError: () => void;
+  onLeave: () => void;
+}) {
+  const layout = useLayoutMode();
+  const isMobile = layout !== "desktop";
+
+  return (
     <main className="relative h-screen w-screen overflow-hidden bg-stone-950">
       {state.status === "waiting" ? (
         <LobbyScene state={state} socket={socket} />
+      ) : layout === "mobile-landscape" ? (
+        <MobileLandscapePlayArea state={state} socket={socket} />
+      ) : layout === "mobile-portrait" ? (
+        <MobilePlayArea state={state} socket={socket} />
       ) : (
         <PlayArea
           state={state}
@@ -73,12 +118,7 @@ export default function GamePage({
       <Header
         roomId={roomId}
         statusText={statusLabel(state.status)}
-        onLeave={() => {
-          socket.emit("room:leave", { roomId });
-          setSession(null);
-          clearRoomState();
-          router.push("/lobby");
-        }}
+        onLeave={onLeave}
         hostId={state.hostId}
         meId={state.me.id}
         canStart={
@@ -89,7 +129,7 @@ export default function GamePage({
         canFinish={state.status === "playing"}
         onStart={() => socket.emit("room:start", { roomId })}
         onFinish={() => socket.emit("room:finish", { roomId })}
-        reserveRight={state.status !== "waiting"}
+        reserveRight={state.status !== "waiting" && !isMobile}
       />
 
       {error && (
@@ -108,15 +148,7 @@ export default function GamePage({
       )}
 
       {state.status === "finished" && (
-        <WinnerOverlay
-          state={state}
-          onClose={() => {
-            socket.emit("room:leave", { roomId });
-            setSession(null);
-            clearRoomState();
-            router.push("/lobby");
-          }}
-        />
+        <WinnerOverlay state={state} onClose={onLeave} />
       )}
     </main>
   );
