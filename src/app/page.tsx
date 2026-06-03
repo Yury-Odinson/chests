@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useGameSocket } from "@/features/game/SocketProvider";
+import { RulesButton } from "@/features/game/components/RulesModal";
 
 export default function HomePage() {
   const router = useRouter();
@@ -43,6 +44,7 @@ export default function HomePage() {
           <p className="text-sm text-amber-50/70">
             Карточная игра для 2–5 игроков.
           </p>
+          <RulesButton label="Как играть?" />
         </header>
 
         <div className="mt-8 space-y-3">

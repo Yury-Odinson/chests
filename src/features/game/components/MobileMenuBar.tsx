@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { GameLogItem, GameLogKind } from "@/shared/types/game";
+import { RulesButton } from "./RulesModal";
 
 /**
  * Compact top bar for the mobile layouts: action buttons on the left, a
@@ -36,6 +37,7 @@ export function MobileMenuBar({
 }) {
   const buttons = (
     <div className="flex shrink-0 items-center gap-1.5">
+      <RulesButton variant="icon" />
       {isHost && canFinish && (
         <button
           type="button"
@@ -91,9 +93,6 @@ function MenuDeck({ count }: { count: number }) {
   const empty = count === 0;
   return (
     <div data-anchor="deck" className="flex shrink-0 items-center gap-1.5">
-      <span className="text-[10px] uppercase tracking-wide text-amber-50/55">
-        колода
-      </span>
       <div className="relative h-10 w-7">
         {empty ? (
           <div className="flex h-full w-full items-center justify-center rounded-[5px] border-2 border-dashed border-amber-100/25 bg-stone-950/35 text-[8px] uppercase text-amber-50/45">

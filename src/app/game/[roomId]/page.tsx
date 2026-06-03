@@ -11,6 +11,7 @@ import { GameLog } from "@/features/game/components/GameLog";
 import { MobileLandscapePlayArea } from "@/features/game/components/MobileLandscapePlayArea";
 import { MobilePlayArea } from "@/features/game/components/MobilePlayArea";
 import { MyHand } from "@/features/game/components/MyHand";
+import { RulesButton } from "@/features/game/components/RulesModal";
 import { seatHighlightClass } from "@/features/game/components/seatHighlight";
 import { WinnerOverlay } from "@/features/game/components/WinnerOverlay";
 import { useLayoutMode } from "@/features/game/hooks/useLayoutMode";
@@ -248,6 +249,7 @@ function Header({
             Завершить
           </button>
         )}
+        <RulesButton variant="outline" />
         <button
           type="button"
           onClick={onLeave}

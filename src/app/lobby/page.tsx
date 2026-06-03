@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useGameSocket } from "@/features/game/SocketProvider";
+import { RulesButton } from "@/features/game/components/RulesModal";
 import type { RoomSummary } from "@/shared/types/game";
 
 export default function LobbyPage() {
@@ -91,13 +92,16 @@ export default function LobbyPage() {
               </p>
             )}
           </div>
-          <button
-            type="button"
-            onClick={() => router.push("/")}
-            className="rounded-md border border-amber-100/20 px-2.5 py-1 text-xs text-amber-50/70 transition hover:border-amber-200/70 hover:text-amber-50"
-          >
-            сменить имя
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            <RulesButton variant="outline" />
+            <button
+              type="button"
+              onClick={() => router.push("/")}
+              className="rounded-md border border-amber-100/20 px-2.5 py-1 text-xs text-amber-50/70 transition hover:border-amber-200/70 hover:text-amber-50"
+            >
+              сменить имя
+            </button>
+          </div>
         </header>
 
         <button
