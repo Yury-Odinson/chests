@@ -9,8 +9,8 @@ import type { EngineResult } from "@/server/game/types";
 import type { GameRoom } from "@/shared/types/game";
 import { broadcastLogs, broadcastState, type GameIO } from "./broadcast";
 
-const MIN_DELAY_MS = 800;
-const MAX_DELAY_MS = 2000;
+const MIN_DELAY_MS = 1800;
+const MAX_DELAY_MS = 3500;
 
 /** Rooms with a bot tick already queued, so we never double-schedule one. */
 const scheduled = new Set<string>();

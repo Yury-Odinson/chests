@@ -11,6 +11,7 @@ import { AskFlow } from "./AskFlow";
 import { ChestsList } from "./ChestsList";
 import { MobileMenuBar } from "./MobileMenuBar";
 import { MyHand } from "./MyHand";
+import { seatHighlightClass } from "./seatHighlight";
 
 type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
@@ -58,7 +59,7 @@ export function MobilePlayArea({
 
   return (
     <section
-      className="game-mobile absolute inset-0 flex flex-col overflow-y-auto bg-stone-950 bg-cover bg-center"
+      className="game-mobile absolute inset-0 flex flex-col overflow-hidden bg-stone-950 bg-cover bg-center"
       style={{
         backgroundImage:
           "linear-gradient(180deg, rgba(9, 6, 5, 0.42) 0%, rgba(9, 6, 5, 0.72) 100%), url('/game-bg.webp')",
@@ -72,10 +73,15 @@ export function MobilePlayArea({
           onLeave={onLeave}
           log={state.log}
           stacked
+          totalChests={totalChests}
+          deckCount={state.deckCount}
         />
       </div>
 
-      <div className="flex flex-1 flex-col gap-3 px-3 pb-3 pt-3">
+      {/* Scrollable middle zone: opponents + ask flow. When the viewport is
+          too short, only this scrolls — the menu bar above and the mascot +
+          hand below stay pinned and visible. */}
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-3 pt-3">
         {/* Opponents row (3 / 4 across the top, 2 on the left in the mockup). */}
         {opponents.length > 0 && (
           <div className="flex flex-wrap gap-2">
@@ -87,6 +93,7 @@ export function MobilePlayArea({
                   key={player.id}
                   player={player}
                   isCurrent={state.currentPlayerId === player.id}
+                  isTarget={state.pendingGuess?.targetId === player.id}
                   isSelectable={isSelectable}
                   isSelected={activeTargetId === player.id}
                   isDimmed={isChoosingTarget && !isSelectable}
@@ -97,16 +104,9 @@ export function MobilePlayArea({
           </div>
         )}
 
-        {/* Table: chest counter + deck on a strip, controls below. */}
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-200/20 bg-zinc-950/55 px-3 py-2 text-sm text-amber-50 backdrop-blur-[2px]">
-          <span>
-            <span className="text-amber-100/60">сундуки:</span>{" "}
-            <span className="font-semibold">{totalChests}/13</span>
-          </span>
-          <MobileDeck count={state.deckCount} />
-        </div>
-
-        <div className="pointer-events-auto">
+        {/* Table: ask flow controls. Chest counter + deck now live in the
+            top menu bar to free up vertical space. */}
+        <div className="pointer-events-auto pb-1">
           <AskFlow
             state={state}
             socket={socket}
@@ -114,7 +114,11 @@ export function MobilePlayArea({
             onTargetSelect={setSelectedTargetId}
           />
         </div>
+      </div>
 
+      {/* Mascot hint + my hand: pinned below the scroll zone so they're always
+          reachable without scrolling the whole screen. */}
+      <div className="shrink-0 px-3 pt-2">
         <MobileMascotHint
           state={state}
           activeTargetId={activeTargetId}
@@ -122,51 +126,15 @@ export function MobilePlayArea({
           canChooseTarget={canChooseTarget}
         />
       </div>
-
-      {/* My seat + hand, sticky at the bottom so it's always reachable. */}
       <MobileMySeat state={state} />
     </section>
-  );
-}
-
-function MobileDeck({ count }: { count: number }) {
-  const empty = count === 0;
-  return (
-    <div data-anchor="deck" className="flex items-center gap-2">
-      <span className="text-[10px] uppercase tracking-wide text-amber-50/55">
-        колода
-      </span>
-      <div className="relative h-12 w-9">
-        {empty ? (
-          <div className="flex h-full w-full items-center justify-center rounded-[6px] border-2 border-dashed border-amber-100/25 bg-stone-950/35 text-[9px] uppercase text-amber-50/45">
-            пусто
-          </div>
-        ) : (
-          <img
-            src="/card-back.webp"
-            alt="Колода"
-            className="h-full w-full rounded-[6px] object-cover shadow-md"
-            draggable={false}
-          />
-        )}
-        <span
-          className={[
-            "absolute -bottom-1.5 -right-1.5 grid min-w-5 place-items-center rounded-full border px-1 text-[11px] font-bold shadow",
-            empty
-              ? "border-amber-100/20 bg-stone-900/85 text-amber-50/60"
-              : "border-amber-200/50 bg-amber-300 text-stone-950",
-          ].join(" ")}
-        >
-          {count}
-        </span>
-      </div>
-    </div>
   );
 }
 
 function MobileSeat({
   player,
   isCurrent,
+  isTarget,
   isSelectable,
   isSelected,
   isDimmed,
@@ -174,6 +142,7 @@ function MobileSeat({
 }: {
   player: PublicPlayer;
   isCurrent: boolean;
+  isTarget: boolean;
   isSelectable: boolean;
   isSelected: boolean;
   isDimmed: boolean;
@@ -182,13 +151,7 @@ function MobileSeat({
   const className = [
     "min-w-[140px] flex-1 rounded-xl border px-2.5 py-2 text-left text-amber-50 shadow-lg transition bg-[#1d130d]/90",
     isDimmed ? "opacity-45" : "opacity-100",
-    isSelected
-      ? "border-amber-200 ring-2 ring-amber-200/70"
-      : isCurrent
-        ? "border-amber-300/80 ring-2 ring-amber-300/45"
-        : isSelectable
-          ? "border-amber-200/60 ring-2 ring-amber-200/30"
-          : "border-amber-100/18",
+    seatHighlightClass({ isCurrent, isTarget, isSelectable, isSelected }),
   ].join(" ");
 
   const content = (
@@ -217,11 +180,15 @@ function MobileSeat({
             </div>
           </div>
         </div>
-        {isCurrent && (
-          <span className="rounded-full bg-amber-300 px-1.5 py-0.5 text-[9px] font-semibold text-stone-950">
+        {isCurrent ? (
+          <span className="rounded-full bg-emerald-400 px-1.5 py-0.5 text-[9px] font-semibold text-stone-950">
             ход
           </span>
-        )}
+        ) : isTarget ? (
+          <span className="rounded-full bg-yellow-200 px-1.5 py-0.5 text-[9px] font-semibold text-stone-950">
+            спрашивают
+          </span>
+        ) : null}
       </div>
 
       <MobileCardFan count={player.cardsCount} />
@@ -280,15 +247,14 @@ function MobileCardFan({ count }: { count: number }) {
 
 function MobileMySeat({ state }: { state: ClientGameState }) {
   const isCurrent = state.currentPlayerId === state.me.id;
+  const isTarget = state.pendingGuess?.targetId === state.me.id;
 
   return (
     <section
       data-anchor={`seat-${state.me.id}`}
       className={[
-        "sticky bottom-0 z-10 mx-2 mb-2 rounded-2xl border bg-[#160f0b]/90 p-2 text-amber-50 shadow-[0_-12px_40px_rgba(0,0,0,0.5)] backdrop-blur-[3px]",
-        isCurrent
-          ? "border-amber-300/85 ring-2 ring-amber-300/40"
-          : "border-amber-100/18",
+        "z-10 mx-2 mb-2 mt-1.5 shrink-0 rounded-2xl border bg-[#160f0b]/90 p-2 text-amber-50 shadow-[0_-12px_40px_rgba(0,0,0,0.5)] backdrop-blur-[3px]",
+        seatHighlightClass({ isCurrent, isTarget }),
       ].join(" ")}
     >
       <div className="mb-1.5 flex items-center justify-between gap-2">
@@ -299,18 +265,22 @@ function MobileMySeat({ state }: { state: ClientGameState }) {
           <h3 className="truncate text-sm font-semibold leading-tight">
             {state.me.name}
           </h3>
-          {isCurrent && (
-            <span className="shrink-0 rounded-full bg-amber-300 px-2 py-0.5 text-[10px] font-semibold text-stone-950">
+          {isCurrent ? (
+            <span className="shrink-0 rounded-full bg-emerald-400 px-2 py-0.5 text-[10px] font-semibold text-stone-950">
               ваш ход
             </span>
-          )}
+          ) : isTarget ? (
+            <span className="shrink-0 rounded-full bg-yellow-200 px-2 py-0.5 text-[10px] font-semibold text-stone-950">
+              вас спрашивают
+            </span>
+          ) : null}
         </div>
         <div className="flex min-w-0 items-center gap-1.5 text-[10px]">
           <span className="shrink-0 text-amber-50/62">сундуки:</span>
           <ChestsList chests={state.me.chests} />
         </div>
       </div>
-      <div className="max-h-[34vh] overflow-y-auto overflow-x-auto rounded-xl border border-amber-100/12 bg-stone-950/26 p-2">
+      <div className="max-h-[34dvh] overflow-x-auto overflow-y-auto rounded-xl border border-amber-100/12 bg-stone-950/26 p-2">
         <MyHand hand={state.me.hand} compact />
       </div>
     </section>

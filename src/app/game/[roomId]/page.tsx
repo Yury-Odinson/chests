@@ -11,6 +11,7 @@ import { GameLog } from "@/features/game/components/GameLog";
 import { MobileLandscapePlayArea } from "@/features/game/components/MobileLandscapePlayArea";
 import { MobilePlayArea } from "@/features/game/components/MobilePlayArea";
 import { MyHand } from "@/features/game/components/MyHand";
+import { seatHighlightClass } from "@/features/game/components/seatHighlight";
 import { WinnerOverlay } from "@/features/game/components/WinnerOverlay";
 import { useLayoutMode } from "@/features/game/hooks/useLayoutMode";
 import type { ClientGameState, PublicPlayer } from "@/shared/types/game";
@@ -101,7 +102,7 @@ function GameShell({
   const isMobile = layout !== "desktop";
 
   return (
-    <main className="relative h-screen w-screen overflow-hidden bg-stone-950">
+    <main className="relative h-dvh w-screen overflow-hidden bg-stone-950">
       {state.status === "waiting" ? (
         <LobbyScene state={state} socket={socket} />
       ) : layout === "mobile-landscape" ? (
@@ -426,6 +427,7 @@ function PlayArea({
               key={player.id}
               player={player}
               isCurrent={state.currentPlayerId === player.id}
+              isTarget={state.pendingGuess?.targetId === player.id}
               isSelectable={isSelectable}
               isSelected={activeTargetId === player.id}
               isDimmed={isChoosingTarget && !isSelectable}
@@ -616,6 +618,7 @@ const OPPONENT_SEAT_SLOTS: OpponentSeatSlot[] = [
 function TableSeat({
   player,
   isCurrent,
+  isTarget,
   isSelectable,
   isSelected,
   isDimmed,
@@ -624,6 +627,7 @@ function TableSeat({
 }: {
   player: PublicPlayer;
   isCurrent: boolean;
+  isTarget: boolean;
   isSelectable: boolean;
   isSelected: boolean;
   isDimmed: boolean;
@@ -635,13 +639,7 @@ function TableSeat({
     isSelectable ? "z-30 cursor-pointer" : "z-10",
     isDimmed ? "opacity-45" : "opacity-100",
     "bg-[#1d130d]/90",
-    isSelected
-      ? "border-amber-200 ring-2 ring-amber-200/70"
-      : isCurrent
-        ? "border-amber-300/80 ring-2 ring-amber-300/45"
-        : isSelectable
-          ? "border-amber-200/60 ring-2 ring-amber-200/30 hover:border-amber-100 hover:ring-amber-100/50"
-          : "border-amber-100/18",
+    seatHighlightClass({ isCurrent, isTarget, isSelectable, isSelected }),
     slot.positionClassName,
     slot.tiltClassName,
   ].join(" ");
@@ -672,11 +670,15 @@ function TableSeat({
             </div>
           </div>
         </div>
-        {isCurrent && (
-          <span className="rounded-full bg-amber-300 px-1.5 py-0.5 text-[10px] font-semibold text-stone-950">
+        {isCurrent ? (
+          <span className="rounded-full bg-emerald-400 px-1.5 py-0.5 text-[10px] font-semibold text-stone-950">
             ход
           </span>
-        )}
+        ) : isTarget ? (
+          <span className="rounded-full bg-yellow-200 px-1.5 py-0.5 text-[10px] font-semibold text-stone-950">
+            спрашивают
+          </span>
+        ) : null}
       </div>
 
       <MiniCardFan count={player.cardsCount} />
@@ -736,15 +738,14 @@ function MiniCardFan({ count }: { count: number }) {
 
 function MySeat({ state }: { state: ClientGameState }) {
   const isCurrent = state.currentPlayerId === state.me.id;
+  const isTarget = state.pendingGuess?.targetId === state.me.id;
 
   return (
     <section
       data-anchor={`seat-${state.me.id}`}
       className={[
         "game-my-seat absolute bottom-4 z-10 w-[700px] -translate-x-1/2 rounded-2xl border bg-[#160f0b]/82 p-2.5 text-amber-50 shadow-[0_24px_80px_rgba(0,0,0,0.52)] backdrop-blur-[3px]",
-        isCurrent
-          ? "border-amber-300/85 ring-2 ring-amber-300/40"
-          : "border-amber-100/18",
+        seatHighlightClass({ isCurrent, isTarget }),
       ].join(" ")}
     >
       <div className="mb-2 flex items-center justify-between gap-3">
@@ -758,11 +759,15 @@ function MySeat({ state }: { state: ClientGameState }) {
             </h3>
             <p className="text-xs text-amber-50/62">ваше место за столом</p>
           </div>
-          {isCurrent && (
-            <span className="rounded-full bg-amber-300 px-2 py-0.5 text-xs font-semibold text-stone-950">
+          {isCurrent ? (
+            <span className="rounded-full bg-emerald-400 px-2 py-0.5 text-xs font-semibold text-stone-950">
               ваш ход
             </span>
-          )}
+          ) : isTarget ? (
+            <span className="rounded-full bg-yellow-200 px-2 py-0.5 text-xs font-semibold text-stone-950">
+              вас спрашивают
+            </span>
+          ) : null}
         </div>
         <div className="flex min-w-0 items-center gap-2 text-xs">
           <span className="shrink-0 text-amber-50/62">сундуки:</span>

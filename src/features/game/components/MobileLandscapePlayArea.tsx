@@ -11,6 +11,7 @@ import { AskFlow } from "./AskFlow";
 import { ChestsList } from "./ChestsList";
 import { MobileMenuBar } from "./MobileMenuBar";
 import { MyHand } from "./MyHand";
+import { seatHighlightClass } from "./seatHighlight";
 
 type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
@@ -109,6 +110,7 @@ export function MobileLandscapePlayArea({
               <LandscapeSeat
                 player={player}
                 isCurrent={state.currentPlayerId === player.id}
+                isTarget={state.pendingGuess?.targetId === player.id}
                 isSelectable={isSelectable}
                 isSelected={activeTargetId === player.id}
                 isDimmed={isChoosingTarget && !isSelectable}
@@ -200,6 +202,7 @@ function LandscapeDeck({ count }: { count: number }) {
 function LandscapeSeat({
   player,
   isCurrent,
+  isTarget,
   isSelectable,
   isSelected,
   isDimmed,
@@ -207,6 +210,7 @@ function LandscapeSeat({
 }: {
   player: PublicPlayer;
   isCurrent: boolean;
+  isTarget: boolean;
   isSelectable: boolean;
   isSelected: boolean;
   isDimmed: boolean;
@@ -215,13 +219,7 @@ function LandscapeSeat({
   const className = [
     "w-full rounded-lg border px-2 py-1.5 text-left text-amber-50 shadow transition bg-[#1d130d]/90",
     isDimmed ? "opacity-45" : "opacity-100",
-    isSelected
-      ? "border-amber-200 ring-2 ring-amber-200/70"
-      : isCurrent
-        ? "border-amber-300/80 ring-2 ring-amber-300/45"
-        : isSelectable
-          ? "border-amber-200/60 ring-2 ring-amber-200/30"
-          : "border-amber-100/18",
+    seatHighlightClass({ isCurrent, isTarget, isSelectable, isSelected }),
   ].join(" ");
 
   const content = (
@@ -243,11 +241,15 @@ function LandscapeSeat({
             {player.name}
           </span>
         </div>
-        {isCurrent && (
-          <span className="shrink-0 rounded-full bg-amber-300 px-1.5 py-0.5 text-[8px] font-semibold text-stone-950">
+        {isCurrent ? (
+          <span className="shrink-0 rounded-full bg-emerald-400 px-1.5 py-0.5 text-[8px] font-semibold text-stone-950">
             ход
           </span>
-        )}
+        ) : isTarget ? (
+          <span className="shrink-0 rounded-full bg-yellow-200 px-1.5 py-0.5 text-[8px] font-semibold text-stone-950">
+            спрашивают
+          </span>
+        ) : null}
       </div>
 
       <LandscapeCardFan count={player.cardsCount} />
@@ -306,15 +308,14 @@ function LandscapeCardFan({ count }: { count: number }) {
 
 function LandscapeMySeat({ state }: { state: ClientGameState }) {
   const isCurrent = state.currentPlayerId === state.me.id;
+  const isTarget = state.pendingGuess?.targetId === state.me.id;
 
   return (
     <section
       data-anchor={`seat-${state.me.id}`}
       className={[
         "flex h-full min-h-0 flex-col rounded-xl border bg-[#160f0b]/90 p-1.5 text-amber-50 shadow-lg backdrop-blur-[3px]",
-        isCurrent
-          ? "border-amber-300/85 ring-2 ring-amber-300/40"
-          : "border-amber-100/18",
+        seatHighlightClass({ isCurrent, isTarget }),
       ].join(" ")}
     >
       <div className="mb-1 flex items-center justify-between gap-2">
@@ -325,11 +326,15 @@ function LandscapeMySeat({ state }: { state: ClientGameState }) {
           <span className="truncate text-[11px] font-semibold leading-tight">
             {state.me.name}
           </span>
-          {isCurrent && (
-            <span className="shrink-0 rounded-full bg-amber-300 px-1.5 py-0.5 text-[8px] font-semibold text-stone-950">
+          {isCurrent ? (
+            <span className="shrink-0 rounded-full bg-emerald-400 px-1.5 py-0.5 text-[8px] font-semibold text-stone-950">
               ваш ход
             </span>
-          )}
+          ) : isTarget ? (
+            <span className="shrink-0 rounded-full bg-yellow-200 px-1.5 py-0.5 text-[8px] font-semibold text-stone-950">
+              спрашивают
+            </span>
+          ) : null}
         </div>
         <div className="flex min-w-0 items-center gap-1 text-[9px]">
           <span className="shrink-0 text-amber-50/62">сундуки:</span>
