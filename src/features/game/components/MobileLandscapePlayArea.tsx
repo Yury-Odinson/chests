@@ -137,8 +137,10 @@ export function MobileLandscapePlayArea({
           </div>
         </div>
 
-        {/* Bottom row: mascot (t) | my hand (1) | deck (k). */}
-        <div className="col-start-1 row-start-3 flex items-end">
+        {/* Bottom row: mascot (t) | my hand (1) | deck (k).
+            The mascot cancels the grid's bottom padding so it sits flush with
+            the very bottom edge of the screen. */}
+        <div className="col-start-1 row-start-3 -mb-2 flex items-end">
           <LandscapeMascotHint
             state={state}
             activeTargetId={activeTargetId}
@@ -149,7 +151,7 @@ export function MobileLandscapePlayArea({
         <div className="col-start-2 col-end-6 row-start-3 min-h-0">
           <LandscapeMySeat state={state} />
         </div>
-        <div className="col-start-6 row-start-3 flex items-end justify-end">
+        <div className="col-start-6 row-start-3 flex items-end justify-center">
           <LandscapeDeck count={state.deckCount} />
         </div>
       </div>
@@ -164,7 +166,7 @@ function LandscapeDeck({ count }: { count: number }) {
       data-anchor="deck"
       className="flex shrink-0 flex-col items-center gap-1 rounded-lg border border-amber-100/16 bg-[#160f0b]/80 px-2 py-1.5"
     >
-      <div className="relative h-11 w-8">
+      <div className="relative h-21 w-18">
         {empty ? (
           <div className="flex h-full w-full items-center justify-center rounded-md border-2 border-dashed border-amber-100/25 bg-stone-950/35 text-[8px] uppercase text-amber-50/45">
             пусто
@@ -401,9 +403,9 @@ function LandscapeMascotHint({
         <span className="absolute -bottom-2 left-3 h-3.5 w-3.5 rotate-45 border-b-2 border-r-2 border-stone-900 bg-amber-50" />
       </div>
       <img
-        src="/mascot.webp"
+        src="/mascot-mob.webp"
         alt="Маскот игры"
-        className="h-12 w-auto select-none drop-shadow-[0_6px_10px_rgba(0,0,0,0.5)]"
+        className="h-20 w-auto select-none drop-shadow-[0_6px_10px_rgba(0,0,0,0.5)]"
         draggable={false}
       />
     </div>

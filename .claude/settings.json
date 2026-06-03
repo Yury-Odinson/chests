@@ -6,7 +6,9 @@
       "Bash(npx tsx *)",
       "Bash(curl -s -o /dev/null -w \"health: %{http_code}\\\\n\" --max-time 3 http://localhost:3000/)",
       "Bash(fuser -k 3000/tcp 2>/dev/null; sleep 2 *)",
-      "Bash(lsof -ti:3000)"
+      "Bash(lsof -ti:3000)",
+      "Bash(npx eslint *)",
+      "Bash(grep -v \"no-img-element\\\\|slower LCP\\\\|Consider using\\\\|incur additional\\\\|nextjs.org\\\\|^$\")"
     ],
     "additionalDirectories": [
       "/tmp"

@@ -24,6 +24,49 @@ const TABLE_PANEL_CLASS =
 
 const SECONDARY_TEXT_CLASS = "text-amber-50/65";
 
+/**
+ * A signature of the parts of game state our own action would change. After we
+ * send an action we remember this; while the live signature still matches the
+ * one we sent on, the server hasn't answered yet, so we keep showing the panel
+ * (disabled) instead of letting it vanish during the network round-trip.
+ */
+function turnSignature(state: ClientGameState): string {
+  const g = state.pendingGuess;
+  const stage = g ? `${g.stage}:${g.askerId}:${g.targetId}` : "none";
+  return `${state.currentPlayerId}|${stage}|${state.log.length}`;
+}
+
+/**
+ * Returns `[awaiting, run]`. Calling `run(fn)` fires the action and marks us as
+ * awaiting the server. `awaiting` is derived (no effect/setState-in-effect): it
+ * stays true only while the live state signature equals the one captured at
+ * send time, and flips to false automatically as soon as a fresh state arrives.
+ */
+function useAwaitingServer(
+  state: ClientGameState
+): [boolean, (fn: () => void) => void] {
+  const [sentSignature, setSentSignature] = useState<string | null>(null);
+  const current = turnSignature(state);
+  const awaiting = sentSignature !== null && sentSignature === current;
+
+  const run = (fn: () => void) => {
+    setSentSignature(current);
+    fn();
+  };
+
+  return [awaiting, run];
+}
+
+/** Small inline "waiting for the server" note shown after an action is sent. */
+function AwaitingNote() {
+  return (
+    <p className="mt-3 flex items-center justify-center gap-2 text-sm text-amber-50/70">
+      <span className="h-3 w-3 animate-spin rounded-full border-2 border-amber-200/40 border-t-amber-200" />
+      Отправляю…
+    </p>
+  );
+}
+
 export function AskFlow({
   state,
   socket,
@@ -106,6 +149,7 @@ function AskStage({
 }) {
   const me = state.me;
   const [internalTargetId, setInternalTargetId] = useState<string | null>(null);
+  const [awaiting, run] = useAwaitingServer(state);
 
   const possibleTargets = state.players.filter(
     (p) => p.id !== me.id && p.cardsCount > 0
@@ -126,13 +170,16 @@ function AskStage({
   };
 
   const ask = (rank: Rank) => {
-    if (!targetId) return;
-    socket.emit("game:ask-rank", {
-      roomId: state.roomId,
-      targetPlayerId: targetId,
-      rank,
+    if (!targetId || awaiting) return;
+    run(() => {
+      socket.emit("game:ask-rank", {
+        roomId: state.roomId,
+        targetPlayerId: targetId,
+        rank,
+      });
+      // Don't clear the target yet — keep the panel in place until the server
+      // responds, so it doesn't blink away during the round-trip.
     });
-    setTargetId(null);
   };
 
   if (possibleTargets.length === 0) {
@@ -166,7 +213,8 @@ function AskStage({
             <button
               type="button"
               onClick={() => setTargetId(null)}
-              className="rounded-lg border border-amber-100/20 px-2.5 py-1 text-xs text-amber-50/75 transition hover:border-amber-200/60 hover:text-amber-50"
+              disabled={awaiting}
+              className="rounded-lg border border-amber-100/20 px-2.5 py-1 text-xs text-amber-50/75 transition hover:border-amber-200/60 hover:text-amber-50 disabled:opacity-40"
             >
               сменить
             </button>
@@ -181,12 +229,14 @@ function AskStage({
                 key={rank}
                 type="button"
                 onClick={() => ask(rank)}
-                className="min-w-11 rounded-lg border border-amber-100/25 bg-amber-50 px-3 py-2 text-sm font-semibold text-stone-950 transition hover:border-amber-200 hover:bg-white"
+                disabled={awaiting}
+                className="min-w-11 rounded-lg border border-amber-100/25 bg-amber-50 px-3 py-2 text-sm font-semibold text-stone-950 transition hover:border-amber-200 hover:bg-white disabled:opacity-50"
               >
                 {rank}
               </button>
             ))}
           </div>
+          {awaiting && <AwaitingNote />}
         </div>
       )}
     </div>
@@ -207,9 +257,13 @@ function DetailStage({
   const me = state.me;
   const askerCount = me.hand.filter((c) => c.rank === rank).length;
   const maxPossible = 4 - askerCount;
+  const [awaiting, run] = useAwaitingServer(state);
 
   const sendCount = (count: number) => {
-    socket.emit("game:guess-count", { roomId: state.roomId, count });
+    if (awaiting) return;
+    run(() => {
+      socket.emit("game:guess-count", { roomId: state.roomId, count });
+    });
   };
 
   return (
@@ -230,12 +284,14 @@ function DetailStage({
               key={n}
               type="button"
               onClick={() => sendCount(n)}
-              className="flex-1 rounded-lg border border-amber-100/20 bg-amber-50 p-3 text-xl font-semibold text-stone-950 transition hover:border-amber-200 hover:bg-white"
+              disabled={awaiting}
+              className="flex-1 rounded-lg border border-amber-100/20 bg-amber-50 p-3 text-xl font-semibold text-stone-950 transition hover:border-amber-200 hover:bg-white disabled:opacity-50"
             >
               {n}
             </button>
           ))}
         </div>
+        {awaiting && <AwaitingNote />}
       </div>
     </div>
   );
@@ -260,8 +316,10 @@ function SuitsStage({
   );
   const availableSuits = SUITS.filter((s) => !mySuitsOfRank.has(s));
   const [picked, setPicked] = useState<Suit[]>([]);
+  const [awaiting, run] = useAwaitingServer(state);
 
   const toggle = (suit: Suit) => {
+    if (awaiting) return;
     setPicked((prev) =>
       prev.includes(suit)
         ? prev.filter((s) => s !== suit)
@@ -272,8 +330,10 @@ function SuitsStage({
   };
 
   const submit = () => {
-    if (picked.length !== count) return;
-    socket.emit("game:guess-suits", { roomId: state.roomId, suits: picked });
+    if (picked.length !== count || awaiting) return;
+    run(() => {
+      socket.emit("game:guess-suits", { roomId: state.roomId, suits: picked });
+    });
   };
 
   return (
@@ -291,12 +351,13 @@ function SuitsStage({
               key={suit}
               type="button"
               onClick={() => toggle(suit)}
+              disabled={awaiting}
               className={[
                 "flex flex-1 flex-col items-center gap-1 rounded-lg border p-3",
                 isPicked
                   ? "border-amber-300 ring-2 ring-amber-300/40"
                   : "border-amber-100/20",
-                "bg-amber-50 transition hover:border-amber-200 hover:bg-white",
+                "bg-amber-50 transition hover:border-amber-200 hover:bg-white disabled:opacity-50",
                 tableSuitColorClass(suit),
               ].join(" ")}
             >
@@ -309,11 +370,12 @@ function SuitsStage({
       <button
         type="button"
         onClick={submit}
-        disabled={picked.length !== count}
+        disabled={picked.length !== count || awaiting}
         className="w-full rounded-lg bg-amber-300 px-4 py-2 font-medium text-stone-950 transition hover:bg-amber-200 disabled:opacity-50"
       >
         Назвать ({picked.length}/{count})
       </button>
+      {awaiting && <AwaitingNote />}
     </div>
   );
 }

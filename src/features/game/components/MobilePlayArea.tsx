@@ -365,7 +365,7 @@ function MobileMascotHint({
   return (
     <div className="flex items-end gap-2">
       <img
-        src="/mascot.webp"
+        src="/mascot-mob.webp"
         alt="Маскот игры"
         className="h-16 w-auto shrink-0 select-none drop-shadow-[0_8px_14px_rgba(0,0,0,0.5)]"
         draggable={false}
