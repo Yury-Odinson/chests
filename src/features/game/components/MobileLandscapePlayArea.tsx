@@ -9,7 +9,7 @@ import type {
 import type { ClientGameState, PublicPlayer } from "@/shared/types/game";
 import { AskFlow } from "./AskFlow";
 import { ChestsList } from "./ChestsList";
-import { GameLog } from "./GameLog";
+import { MobileMenuBar } from "./MobileMenuBar";
 import { MyHand } from "./MyHand";
 
 type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
@@ -18,20 +18,40 @@ type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
  * Layout for phones held sideways (short viewport, wide). Used by the
  * `mobile-landscape` branch of useLayoutMode.
  *
- * This is a working scaffold: the grid below is intentionally simple so it can
- * be re-styled freely. What must stay intact for the game to keep working:
- *  - the `data-anchor` attributes (`seat-${id}`, `deck`) — the shared
- *    CardFlightLayer animates between them;
- *  - the target-selection wiring (selectedTargetId → AskFlow / seat buttons);
- *  - rendering AskFlow, MyHand, the log and the mascot hint somewhere.
+ * Grid (6 cols × 4 rows), per the agreed mockup:
+ *
+ *   m m m  l l l    row 1: header sits above (absolute); log fills the right
+ *   3 a a  a a 4    row 2: opp slot 3 | table (AskFlow) | opp slot 4
+ *   2 a a  a a 5    row 3: opp slot 2 | table (spans)   | opp slot 5
+ *   t 1 1  1 1 k    row 4: mascot | my hand | deck
+ *
+ * Opponents fill fixed slots (1st→3, 2nd→4, 3rd→2, 4th→5); empty slots collapse
+ * to nothing so the table stays centered with fewer players.
+ *
+ * Must stay intact for the game to keep working:
+ *  - `data-anchor` attrs (`seat-${id}`, `deck`) drive CardFlightLayer;
+ *  - target-selection wiring (selectedTargetId → AskFlow / seat buttons).
  */
+
+// Visual slot order around the table → opponent index that fills it.
+// Slots: top-left, top-right, bottom-left, bottom-right.
+const SLOT_GRID_CLASS = [
+  "col-start-1 row-start-1", // slot "3"
+  "col-start-6 row-start-1", // slot "4"
+  "col-start-1 row-start-2", // slot "2"
+  "col-start-6 row-start-2", // slot "5"
+];
+
 export function MobileLandscapePlayArea({
   state,
   socket,
+  onLeave,
 }: {
   state: ClientGameState;
   socket: GameSocket;
+  onLeave: () => void;
 }) {
+  const isHost = state.hostId === state.me.id;
   const opponents = state.players.filter((p) => p.id !== state.me.id);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
 
@@ -58,23 +78,35 @@ export function MobileLandscapePlayArea({
           "linear-gradient(180deg, rgba(9, 6, 5, 0.42) 0%, rgba(9, 6, 5, 0.72) 100%), url('/game-bg.webp')",
       }}
     >
-      {/* Spacer for the absolutely-positioned Header above. */}
-      <div className="h-[52px] shrink-0" />
+      {/* Top bar ("m m m l l l"): actions + running log, full width. */}
+      <div className="shrink-0 px-2 pt-2">
+        <MobileMenuBar
+          isHost={isHost}
+          canFinish={state.status === "playing"}
+          onFinish={() => socket.emit("room:finish", { roomId: state.roomId })}
+          onLeave={onLeave}
+          log={state.log}
+        />
+      </div>
 
-      {/* ── Replace the grid below with your own landscape layout ──────────
-          Three columns here as a starting point:
-            left  : opponents (vertical list)
-            center: log + table controls (AskFlow) + mascot hint
-            right : deck + my hand                                          */}
-      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_minmax(0,1.2fr)] gap-2 px-2 pb-2">
-        {/* Left: opponents */}
-        <div className="flex min-h-0 flex-col gap-2 overflow-y-auto">
-          {opponents.map((player) => {
-            const isSelectable =
-              isOwnAskStage && possibleTargets.some((p) => p.id === player.id);
-            return (
+      <div
+        className="grid min-h-0 flex-1 gap-1.5 px-2 pb-2 pt-1.5"
+        style={{
+          gridTemplateColumns: "repeat(6, minmax(0, 1fr))",
+          // rows 1–2: table + side seats; row 3: mascot | hand | deck.
+          gridTemplateRows: "minmax(0, 1fr) minmax(0, 1fr) auto",
+        }}
+      >
+        {/* Side opponent slots. */}
+        {opponents.slice(0, SLOT_GRID_CLASS.length).map((player, index) => {
+          const isSelectable =
+            isOwnAskStage && possibleTargets.some((p) => p.id === player.id);
+          return (
+            <div
+              key={player.id}
+              className={`${SLOT_GRID_CLASS[index]} flex min-h-0 items-center`}
+            >
               <LandscapeSeat
-                key={player.id}
                 player={player}
                 isCurrent={state.currentPlayerId === player.id}
                 isSelectable={isSelectable}
@@ -82,30 +114,31 @@ export function MobileLandscapePlayArea({
                 isDimmed={isChoosingTarget && !isSelectable}
                 onSelect={() => setSelectedTargetId(player.id)}
               />
-            );
-          })}
+            </div>
+          );
+        })}
+
+        {/* Center table: AskFlow + chest counter, spanning the 4 middle cols
+            across both upper rows. */}
+        <div className="col-start-2 col-end-6 row-start-1 row-end-3 flex min-h-0 flex-col gap-1.5 overflow-y-auto">
+          <div className="flex shrink-0 items-center justify-center gap-2 rounded-lg border border-amber-200/20 bg-zinc-950/55 px-2.5 py-1 text-xs text-amber-50">
+            <span className="text-amber-100/60">сундуки:</span>
+            <span className="font-semibold">{totalChests}/13</span>
+          </div>
+          <div className="pointer-events-auto flex min-h-0 flex-1 items-center justify-center">
+            <div className="w-full max-w-md">
+              <AskFlow
+                state={state}
+                socket={socket}
+                selectedTargetId={activeTargetId}
+                onTargetSelect={setSelectedTargetId}
+              />
+            </div>
+          </div>
         </div>
 
-        {/* Center: log + table controls + mascot */}
-        <div className="flex min-h-0 flex-col gap-2 overflow-y-auto">
-          <LandscapeLog items={state.log} />
-
-          <div className="flex items-center justify-between gap-2 rounded-lg border border-amber-200/20 bg-zinc-950/55 px-2.5 py-1.5 text-xs text-amber-50">
-            <span>
-              <span className="text-amber-100/60">сундуки:</span>{" "}
-              <span className="font-semibold">{totalChests}/13</span>
-            </span>
-          </div>
-
-          <div className="pointer-events-auto">
-            <AskFlow
-              state={state}
-              socket={socket}
-              selectedTargetId={activeTargetId}
-              onTargetSelect={setSelectedTargetId}
-            />
-          </div>
-
+        {/* Bottom row: mascot (t) | my hand (1) | deck (k). */}
+        <div className="col-start-1 row-start-3 flex items-end">
           <LandscapeMascotHint
             state={state}
             activeTargetId={activeTargetId}
@@ -113,47 +146,15 @@ export function MobileLandscapePlayArea({
             canChooseTarget={canChooseTarget}
           />
         </div>
-
-        {/* Right: deck + my hand */}
-        <div className="flex min-h-0 flex-col gap-2">
-          <LandscapeDeck count={state.deckCount} />
+        <div className="col-start-2 col-end-6 row-start-3 min-h-0">
           <LandscapeMySeat state={state} />
+        </div>
+        <div className="col-start-6 row-start-3 flex items-end justify-end">
+          <LandscapeDeck count={state.deckCount} />
         </div>
       </div>
     </section>
   );
-}
-
-function LandscapeLog({ items }: { items: ClientGameState["log"] }) {
-  const [open, setOpen] = useState(false);
-  const last = items[items.length - 1];
-
-  return (
-    <div className="overflow-hidden rounded-lg border border-amber-100/20 bg-[#160f0b]/86 text-amber-50 shadow-lg backdrop-blur-[3px]">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left"
-      >
-        <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wide text-amber-50/55">
-          лог
-        </span>
-        <span className="min-w-0 flex-1 truncate text-[11px] text-amber-50/86">
-          {last ? stripMarkdown(last.message) : "События появятся здесь."}
-        </span>
-        <span className="shrink-0 text-amber-50/55">{open ? "▲" : "▼"}</span>
-      </button>
-      {open && (
-        <div className="h-32 border-t border-amber-100/16">
-          <GameLog items={items} variant="table" />
-        </div>
-      )}
-    </div>
-  );
-}
-
-function stripMarkdown(message: string): string {
-  return message.replace(/\*\*([^*]+)\*\*/g, "$1");
 }
 
 function LandscapeDeck({ count }: { count: number }) {
@@ -161,21 +162,18 @@ function LandscapeDeck({ count }: { count: number }) {
   return (
     <div
       data-anchor="deck"
-      className="flex shrink-0 items-center gap-2 rounded-lg border border-amber-100/16 bg-[#160f0b]/80 px-2.5 py-1.5"
+      className="flex shrink-0 flex-col items-center gap-1 rounded-lg border border-amber-100/16 bg-[#160f0b]/80 px-2 py-1.5"
     >
-      <span className="text-[9px] uppercase tracking-wide text-amber-50/55">
-        колода
-      </span>
       <div className="relative h-11 w-8">
         {empty ? (
-          <div className="flex h-full w-full items-center justify-center rounded-[6px] border-2 border-dashed border-amber-100/25 bg-stone-950/35 text-[8px] uppercase text-amber-50/45">
+          <div className="flex h-full w-full items-center justify-center rounded-md border-2 border-dashed border-amber-100/25 bg-stone-950/35 text-[8px] uppercase text-amber-50/45">
             пусто
           </div>
         ) : (
           <img
             src="/card-back.webp"
             alt="Колода"
-            className="h-full w-full rounded-[6px] object-cover shadow-md"
+            className="h-full w-full rounded-md object-cover shadow-md"
             draggable={false}
           />
         )}
@@ -190,6 +188,9 @@ function LandscapeDeck({ count }: { count: number }) {
           {count}
         </span>
       </div>
+      <span className="text-[8px] uppercase tracking-wide text-amber-50/55">
+        колода
+      </span>
     </div>
   );
 }
@@ -210,7 +211,7 @@ function LandscapeSeat({
   onSelect: () => void;
 }) {
   const className = [
-    "shrink-0 rounded-lg border px-2 py-1.5 text-left text-amber-50 shadow transition bg-[#1d130d]/90",
+    "w-full rounded-lg border px-2 py-1.5 text-left text-amber-50 shadow transition bg-[#1d130d]/90",
     isDimmed ? "opacity-45" : "opacity-100",
     isSelected
       ? "border-amber-200 ring-2 ring-amber-200/70"
@@ -223,7 +224,7 @@ function LandscapeSeat({
 
   const content = (
     <>
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-1.5">
         <div className="flex min-w-0 items-center gap-1.5">
           <span
             className={[
@@ -308,7 +309,7 @@ function LandscapeMySeat({ state }: { state: ClientGameState }) {
     <section
       data-anchor={`seat-${state.me.id}`}
       className={[
-        "flex min-h-0 flex-1 flex-col rounded-xl border bg-[#160f0b]/90 p-1.5 text-amber-50 shadow-lg backdrop-blur-[3px]",
+        "flex h-full min-h-0 flex-col rounded-xl border bg-[#160f0b]/90 p-1.5 text-amber-50 shadow-lg backdrop-blur-[3px]",
         isCurrent
           ? "border-amber-300/85 ring-2 ring-amber-300/40"
           : "border-amber-100/18",
@@ -371,9 +372,9 @@ function LandscapeMascotHint({
       <button
         type="button"
         onClick={toggle}
-        className="self-start rounded-full border border-amber-200/30 bg-zinc-950/70 px-2.5 py-1 text-[11px] font-medium text-amber-50 shadow-lg"
+        className="rounded-full border border-amber-200/30 bg-zinc-950/70 px-2 py-1 text-[10px] font-medium text-amber-50 shadow-lg"
       >
-        💡 Подсказки
+        💡
       </button>
     );
   }
@@ -386,14 +387,8 @@ function LandscapeMascotHint({
   );
 
   return (
-    <div className="flex items-end gap-1.5">
-      <img
-        src="/mascot.webp"
-        alt="Маскот игры"
-        className="h-12 w-auto shrink-0 select-none drop-shadow-[0_6px_10px_rgba(0,0,0,0.5)]"
-        draggable={false}
-      />
-      <div className="relative flex-1 rounded-[14px] border-2 border-stone-900 bg-amber-50 px-2.5 py-1.5 text-[11px] font-semibold leading-snug text-stone-900 shadow-lg">
+    <div className="relative flex flex-col items-center">
+      <div className="relative mb-1 w-full rounded-[12px] border-2 border-stone-900 bg-amber-50 px-2 py-1 text-[10px] font-semibold leading-snug text-stone-900 shadow-lg">
         {message}
         <button
           type="button"
@@ -403,8 +398,14 @@ function LandscapeMascotHint({
         >
           ✕
         </button>
-        <span className="absolute -bottom-2 left-3 h-3.5 w-3.5 rotate-45 border-b-2 border-l-2 border-stone-900 bg-amber-50" />
+        <span className="absolute -bottom-2 left-3 h-3.5 w-3.5 rotate-45 border-b-2 border-r-2 border-stone-900 bg-amber-50" />
       </div>
+      <img
+        src="/mascot.webp"
+        alt="Маскот игры"
+        className="h-12 w-auto select-none drop-shadow-[0_6px_10px_rgba(0,0,0,0.5)]"
+        draggable={false}
+      />
     </div>
   );
 }
@@ -420,23 +421,23 @@ function landscapePhaseHint(
 
   if (pending && pending.askerId === state.me.id) {
     if (pending.stage === "awaiting-detail") {
-      return `Есть «${pending.rank}». Назови, сколько таких карт.`;
+      return `Есть «${pending.rank}». Сколько таких карт?`;
     }
-    return `Верно! Назови масти всех «${pending.rank}» — их ${pending.count}.`;
+    return `Верно! Назови масти «${pending.rank}» — их ${pending.count}.`;
   }
 
   if (state.currentPlayerId !== state.me.id || pending) {
-    return "Ход соперника. Следи за столом.";
+    return "Ход соперника.";
   }
 
   if (isOwnAskStage) {
     if (!canChooseTarget) {
-      return "Спросить пока не у кого — ждём карты у соперников.";
+      return "Спросить пока не у кого.";
     }
     if (!activeTargetId) {
       return "Твой ход! Выбери соперника.";
     }
-    return "Выбери ранг — только то, что есть у тебя на руке.";
+    return "Выбери ранг из своей руки.";
   }
 
   return "Следи за столом.";

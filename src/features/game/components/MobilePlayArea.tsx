@@ -9,7 +9,7 @@ import type {
 import type { ClientGameState, PublicPlayer } from "@/shared/types/game";
 import { AskFlow } from "./AskFlow";
 import { ChestsList } from "./ChestsList";
-import { GameLog } from "./GameLog";
+import { MobileMenuBar } from "./MobileMenuBar";
 import { MyHand } from "./MyHand";
 
 type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
@@ -31,10 +31,13 @@ type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 export function MobilePlayArea({
   state,
   socket,
+  onLeave,
 }: {
   state: ClientGameState;
   socket: GameSocket;
+  onLeave: () => void;
 }) {
+  const isHost = state.hostId === state.me.id;
   const opponents = state.players.filter((p) => p.id !== state.me.id);
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
 
@@ -61,12 +64,18 @@ export function MobilePlayArea({
           "linear-gradient(180deg, rgba(9, 6, 5, 0.42) 0%, rgba(9, 6, 5, 0.72) 100%), url('/game-bg.webp')",
       }}
     >
-      {/* Spacer for the absolutely-positioned Header above. */}
-      <div className="h-[60px] shrink-0" />
+      <div className="shrink-0 px-3 pt-3">
+        <MobileMenuBar
+          isHost={isHost}
+          canFinish={state.status === "playing"}
+          onFinish={() => socket.emit("room:finish", { roomId: state.roomId })}
+          onLeave={onLeave}
+          log={state.log}
+          stacked
+        />
+      </div>
 
-      <div className="flex flex-1 flex-col gap-3 px-3 pb-3">
-        <MobileLog items={state.log} />
-
+      <div className="flex flex-1 flex-col gap-3 px-3 pb-3 pt-3">
         {/* Opponents row (3 / 4 across the top, 2 on the left in the mockup). */}
         {opponents.length > 0 && (
           <div className="flex flex-wrap gap-2">
@@ -118,38 +127,6 @@ export function MobilePlayArea({
       <MobileMySeat state={state} />
     </section>
   );
-}
-
-function MobileLog({ items }: { items: ClientGameState["log"] }) {
-  const [open, setOpen] = useState(false);
-  const last = items[items.length - 1];
-
-  return (
-    <div className="overflow-hidden rounded-xl border border-amber-100/20 bg-[#160f0b]/86 text-amber-50 shadow-lg backdrop-blur-[3px]">
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left"
-      >
-        <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide text-amber-50/55">
-          лог
-        </span>
-        <span className="min-w-0 flex-1 truncate text-xs text-amber-50/86">
-          {last ? stripMarkdown(last.message) : "События появятся здесь."}
-        </span>
-        <span className="shrink-0 text-amber-50/55">{open ? "▲" : "▼"}</span>
-      </button>
-      {open && (
-        <div className="h-48 border-t border-amber-100/16">
-          <GameLog items={items} variant="table" />
-        </div>
-      )}
-    </div>
-  );
-}
-
-function stripMarkdown(message: string): string {
-  return message.replace(/\*\*([^*]+)\*\*/g, "$1");
 }
 
 function MobileDeck({ count }: { count: number }) {

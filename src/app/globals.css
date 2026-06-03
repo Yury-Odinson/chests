@@ -33,6 +33,26 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/*
+ * Mobile ticker log: a freshly added entry sits at the far left and slides in
+ * from the right into its slot, pushing the older entries rightward. Only the
+ * newest entry animates (keyed remount), the rest just shift via layout.
+ */
+@keyframes ticker-slide-in {
+  from {
+    transform: translateX(28px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.ticker-entry-new {
+  animation: ticker-slide-in 360ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
 .game-scene-bg {
   --game-bg-position: 58%;
   --game-bg-position-factor: 0.58;

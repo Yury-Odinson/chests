@@ -105,9 +105,13 @@ function GameShell({
       {state.status === "waiting" ? (
         <LobbyScene state={state} socket={socket} />
       ) : layout === "mobile-landscape" ? (
-        <MobileLandscapePlayArea state={state} socket={socket} />
+        <MobileLandscapePlayArea
+          state={state}
+          socket={socket}
+          onLeave={onLeave}
+        />
       ) : layout === "mobile-portrait" ? (
-        <MobilePlayArea state={state} socket={socket} />
+        <MobilePlayArea state={state} socket={socket} onLeave={onLeave} />
       ) : (
         <PlayArea
           state={state}
@@ -115,22 +119,26 @@ function GameShell({
         />
       )}
 
-      <Header
-        roomId={roomId}
-        statusText={statusLabel(state.status)}
-        onLeave={onLeave}
-        hostId={state.hostId}
-        meId={state.me.id}
-        canStart={
-          state.status === "waiting" &&
-          state.players.length >= 2 &&
-          state.players.length <= 5
-        }
-        canFinish={state.status === "playing"}
-        onStart={() => socket.emit("room:start", { roomId })}
-        onFinish={() => socket.emit("room:finish", { roomId })}
-        reserveRight={state.status !== "waiting" && !isMobile}
-      />
+      {/* During a mobile game the play areas render their own MobileMenuBar;
+          the desktop Header still covers the lobby on every breakpoint. */}
+      {!(isMobile && state.status !== "waiting") && (
+        <Header
+          roomId={roomId}
+          statusText={statusLabel(state.status)}
+          onLeave={onLeave}
+          hostId={state.hostId}
+          meId={state.me.id}
+          canStart={
+            state.status === "waiting" &&
+            state.players.length >= 2 &&
+            state.players.length <= 5
+          }
+          canFinish={state.status === "playing"}
+          onStart={() => socket.emit("room:start", { roomId })}
+          onFinish={() => socket.emit("room:finish", { roomId })}
+          reserveRight={state.status !== "waiting" && !isMobile}
+        />
+      )}
 
       {error && (
         <div className="fixed inset-x-0 top-2 z-30 mx-auto w-fit max-w-sm rounded-lg border border-red-400/40 bg-red-50 px-3 py-2 text-sm text-red-700 shadow dark:bg-red-900/40 dark:text-red-200">
