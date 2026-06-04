@@ -6,7 +6,7 @@ import type {
   ClientToServerEvents,
   ServerToClientEvents,
 } from "@/shared/types/events";
-import type { ClientGameState, PublicPlayer } from "@/shared/types/game";
+import type { ClientGameState, PublicPlayer, Rank } from "@/shared/types/game";
 import { AskFlow } from "./AskFlow";
 import { ChestsList } from "./ChestsList";
 import { MobileMenuBar } from "./MobileMenuBar";
@@ -191,10 +191,15 @@ function MobileSeat({
         ) : null}
       </div>
 
-      <MobileCardFan count={player.cardsCount} />
-
-      <div className="mt-1.5 border-t border-amber-100/12 pt-1.5">
-        <ChestsList chests={player.chests} />
+      {/* Cards (left) and chests (right) share one row, 50/50, so the seat
+          stays short. Both crowd inward when they run out of room. */}
+      <div className="mt-1.5 flex items-end gap-2">
+        <div className="min-w-0 basis-[60%]">
+          <MobileCardFan count={player.cardsCount} />
+        </div>
+        <div className="min-w-0 basis-[40%] border-l border-amber-100/12 pl-2">
+          <CompactChests chests={player.chests} />
+        </div>
       </div>
     </>
   );
@@ -219,28 +224,81 @@ function MobileSeat({
   );
 }
 
+/** Russian plural for "карта": 1 карта, 2 карты, 5 карт. */
+function cardsLabel(count: number): string {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  if (mod10 === 1 && mod100 !== 11) return "карта";
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return "карты";
+  return "карт";
+}
+
 function MobileCardFan({ count }: { count: number }) {
-  const visibleCards = Array.from({ length: Math.min(count, 5) });
+  const visibleCards = Array.from({ length: Math.min(count, 3) });
   return (
-    <div className="mt-1.5 flex h-7 items-end">
-      {visibleCards.map((_, index) => (
-        <img
-          key={index}
-          src="/card-back.webp"
-          alt=""
-          draggable={false}
-          className="h-6 w-[18px] rounded-[3px] object-cover shadow-sm"
-          style={{
-            marginLeft: index === 0 ? 0 : -7,
-            transform: `rotate(${(index - visibleCards.length / 2) * 4}deg)`,
-          }}
-        />
-      ))}
-      {count > 5 && (
-        <span className="ml-2 self-center rounded-full border border-amber-100/14 bg-stone-950/32 px-1.5 py-0.5 text-[9px] text-amber-50/72">
-          {count} карт
+    <div className="mt-1.5 flex h-7 items-center gap-1.5">
+      <div className="flex items-end">
+        {visibleCards.map((_, index) => (
+          <img
+            key={index}
+            src="/card-back.webp"
+            alt=""
+            draggable={false}
+            className="h-6 w-4.5 rounded-[3px] object-cover shadow-sm"
+            style={{
+              marginLeft: index === 0 ? 0 : -7,
+              transform: `rotate(${(index - visibleCards.length / 2) * 4}deg)`,
+            }}
+          />
+        ))}
+      </div>
+      <span className="shrink-0 whitespace-nowrap rounded-full bg-orange-500/90 px-2 py-0.5 text-center text-[9px] font-semibold text-stone-950 shadow-sm">
+        {count} {cardsLabel(count)}
+      </span>
+    </div>
+  );
+}
+
+/** One chest chip's footprint when not overlapped (h-6 = 24px wide). */
+const CHEST_CHIP_PX = 24;
+
+/**
+ * Chests laid out like a tight card fan: chips only start tucking under each
+ * other once they would overflow the column, then crowd progressively tighter
+ * as more pile up — mirroring how the card fan reads. Chips are clipped to the
+ * column, so they never push the seat wider.
+ *
+ * `columnPx` is a conservative estimate of the half-width column on a phone;
+ * the exact value isn't critical since the row also clips overflow.
+ */
+function CompactChests({ chests }: { chests: Rank[] }) {
+  if (chests.length === 0) {
+    return <span className="text-[9px] text-amber-50/40">нет сундуков</span>;
+  }
+
+  const columnPx = 64;
+  const naturalWidth = chests.length * CHEST_CHIP_PX;
+  // Spread the overflow evenly across the gaps; 0 when everything already fits.
+  const overlap =
+    naturalWidth <= columnPx || chests.length < 2
+      ? 0
+      : Math.min(
+          (naturalWidth - columnPx) / (chests.length - 1),
+          CHEST_CHIP_PX - 7 // keep at least ~7px of each chip visible
+        );
+
+  return (
+    <div className="flex h-7 items-center overflow-hidden">
+      {chests.map((rank, index) => (
+        <span
+          key={rank}
+          className="grid h-6 min-w-6 shrink-0 place-items-center rounded-md border border-amber-300/40 bg-amber-500/25 px-1 text-[11px] font-semibold text-amber-100 shadow-sm"
+          style={{ marginLeft: index === 0 ? 0 : -overlap }}
+          title={`Сундук ${rank}`}
+        >
+          {rank}
         </span>
-      )}
+      ))}
     </div>
   );
 }
